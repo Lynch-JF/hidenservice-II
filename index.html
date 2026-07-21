@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de pedidos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="main-container">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-logo">
+      <img src="LOGO-Photoroom.png" alt="Logo" />
+      <span>Gestión de Pedidos</span>
+    </div>
+    <ul class="navbar-links">
+      <li><a href="index.html" class="active">📦 Pedidos</a></li>
+      <li><a href="Reportes.html">📊 Reporte</a></li>
+    </ul>
+  </nav>
+
+  <h1>Lista de Pedidos</h1>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-pill activos">
+      <span class="stat-dot"></span>
+      <span class="stat-num" id="stat-activos">0</span>
+      <span class="stat-label">Activos</span>
+    </div>
+    <div class="stat-pill pausados">
+      <span class="stat-dot"></span>
+      <span class="stat-num" id="stat-pausados">0</span>
+      <span class="stat-label">Pausados</span>
+    </div>
+    <div class="stat-pill finalizados">
+      <span class="stat-dot"></span>
+      <span class="stat-num" id="stat-finalizados">0</span>
+      <span class="stat-label">Finalizados</span>
+    </div>
+  </div>
+
+  <!-- FORM CARD -->
+  <div class="form-card">
+    <input type="text" id="codigo" placeholder="Código del pedido" />
+    <select id="sacador">
+      <option value="">Selecciona el sacador</option>
+      <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
+      <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
+      <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
+      <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
+      <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
+      <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
+      <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
+      <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
+      <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
+      <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
+      <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
+      <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
+      <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
+      <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
+      <option value="Oscar De Jesús De La Cruz Reinoso">Oscar De Jesús De La Cruz Reinoso</option>
+    </select>
+    <div class="top-actions">
+      <input type="number" id="cantidad" placeholder="Cantidad total de productos" />
+      <button class="add" type="button" onclick="agregarPedido()">Agregar Pedido</button>
+    </div>
+    <button class="pause" onclick="pausarTodos()">Pausar Todos</button>
+    <button class="star"  onclick="reanudarTodos()">Reanudar Todos</button>
+    <button onclick="eliminarTodos()" style="background:transparent;color:#ef4444;border:1px solid #ef4444;">
+      Eliminar todos
+    </button>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <input
+      type="text"
+      id="filtro-texto"
+      placeholder="🔍 Buscar por código..."
+      oninput="aplicarFiltro()"
+    />
+    <select id="filtro-sacador" onchange="aplicarFiltro()">
+      <option value="">Todos los sacadores</option>
+      <option value="omar marmolejos fajardo">Omar Marmolejos Fajardo</option>
+      <option value="jairo fernandez salcedo">Jairo Fernandez Salcedo</option>
+      <option value="ismael augusto veras lasuse">Ismael Augusto Veras Lasuse</option>
+      <option value="fernando antonio burgos cabrera">Fernando Antonio Burgos Cabrera</option>
+      <option value="juan de jesús peña pérez">Juan De Jesús Peña Pérez</option>
+      <option value="luis david nuñez santos">Luis David Nuñez Santos</option>
+      <option value="yustin alexander mendez">Yustin Alexander Mendez</option>
+      <option value="luis eduardo reyes">Luis Eduardo Reyes</option>
+      <option value="omelbe gomez valdez">Omelbe Gomez Valdez</option>
+      <option value="bryhan santo cordero">Bryhan Santo Cordero</option>
+      <option value="enrique nuñez brito">Enrique Nuñez Brito</option>
+      <option value="cirilo reynoso acevedo">Cirilo Reynoso Acevedo</option>
+      <option value="yan carlos cruz paulino">Yan Carlos Cruz Paulino</option>
+      <option value="wilkin ortega diaz">Wilkin Ortega Diaz</option>
+    </select>
+    <span class="filter-count" id="filter-count">0 pedidos</span>
+    <button class="btn-clear-filter" onclick="limpiarFiltro()">✕ Limpiar filtro</button>
+  </div>
+
+  <!-- TASK LIST -->
+  <div id="task-list">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state-icon">🔍</div>
+      <div>No hay pedidos que coincidan con el filtro.</div>
+    </div>
+  </div>
+
+</div><!-- /main-container -->
+
+<!-- ============================================================
+     MODAL FINALIZAR (multi-paso)
+============================================================ -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-step-indicator">
+        <div class="modal-step-dot active"></div>
+        <div class="modal-step-dot"></div>
+        <div class="modal-step-dot"></div>
+        <div class="modal-step-dot"></div>
+      </div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-subtitle" id="modal-subtitle"></div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL EQUIPO — se activa cuando cantidad > umbral
+============================================================ -->
+<div class="modal-overlay" id="modal-equipo-overlay" onclick="handleEquipoOverlayClick(event)">
+  <div class="modal modal-equipo" id="modal-equipo">
+    <div class="modal-equipo-icon">👥</div>
+    <div class="modal-title" id="equipo-title">Pedido de alto volumen</div>
+    <div class="modal-subtitle" id="equipo-subtitle"></div>
+
+    <div class="modal-body" id="equipo-body"></div>
+    <div class="modal-footer" id="equipo-footer"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL AGREGAR AUXILIAR (desde la tarjeta)
+============================================================ -->
+<div class="modal-overlay" id="modal-aux-overlay" onclick="handleAuxOverlayClick(event)">
+  <div class="modal" id="modal-aux">
+    <div class="modal-header">
+      <div class="modal-title">Agregar auxiliar al pedido</div>
+      <div class="modal-subtitle" id="aux-subtitle"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Selecciona el auxiliar</label>
+        <select id="aux-select" style="width:100%;min-width:unset;">
+          <option value="">-- Selecciona un colaborador --</option>
+          <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
+          <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
+          <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
+          <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
+          <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
+          <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
+          <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
+          <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
+          <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
+          <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
+          <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
+          <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
+          <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
+          <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
+        </select>
+      </div>
+      <p class="modal-hint" id="aux-hint">El colaborador seleccionado se añadirá como auxiliar.</p>
+      <p class="modal-hint error-msg" id="aux-error">Selecciona un colaborador válido.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn secondary" onclick="cerrarModalAux()">Cancelar</button>
+      <button class="modal-btn primary" onclick="confirmarAgregarAux()">Agregar auxiliar</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+
+<script>
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById("modal-overlay")) cerrarModal();
+  }
+  function handleEquipoOverlayClick(e) {
+    if (e.target === document.getElementById("modal-equipo-overlay")) cerrarModalEquipo();
+  }
+  function handleAuxOverlayClick(e) {
+    if (e.target === document.getElementById("modal-aux-overlay")) cerrarModalAux();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    ["codigo", "sacador", "cantidad"].forEach(id => {
+      document.getElementById(id).addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); agregarPedido(); }
+      });
+    });
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        cerrarModal();
+        cerrarModalEquipo();
+        cerrarModalAux();
+      }
+    });
+  });
+</script>
+
+<!-- Botón flotante Horas Extras -->
+<button
+  id="btn-float-extras"
+  onclick="abrirPanelHorasExtras()"
+  title="Horas Extras & Días Especiales"
+  style="
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999;
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.45);
+    color: #f59e0b;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(245,158,11,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .2s;
+    font-family: inherit;
+  "
+  onmouseenter="this.style.background='rgba(245,158,11,0.28)'"
+  onmouseleave="this.style.background='rgba(245,158,11,0.15)'"
+>
+  ⏱ Horas Extras
+</button>
+
+<script src="horasextras.js"></script>
+
+</body>
+</html>

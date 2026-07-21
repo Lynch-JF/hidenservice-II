@@ -1,0 +1,358 @@
+function obtenerTop3SacadoresRapidos() {
+  fetch("https://api.sheetbest.com/sheets/e5698a50-c77c-47ee-895a-eeb9c29c7a17")
+    .then(response => response.json())
+    .then(data => {
+      const ahora = new Date();
+      const mesActual = ahora.getMonth();
+      const añoActual = ahora.getFullYear();
+
+      const tiempos = {};
+
+      // Función para convertir "0:02:41" a minutos decimales
+      function tiempoAminutos(tiempoStr) {
+        const partes = tiempoStr.split(":");
+        if (partes.length !== 3) return NaN;
+
+        const [h, m, s] = partes.map(n => parseInt(n));
+        if (isNaN(h) || isNaN(m) || isNaN(s)) return NaN;
+
+        return h * 60 + m + s / 60;
+      }
+
+      data.forEach((pedido, i) => {
+        const horaFin = (pedido["HoraFin"] || pedido["HoraFin "] || "").trim();
+        const sacador = (pedido["Sacador"] || pedido["Sacador "] || "").trim();
+        const tiempoStr = (pedido["Tiempoitms"] || "").trim();
+
+        const fechaFin = new Date(horaFin);
+        const tiempoPorProducto = tiempoAminutos(tiempoStr);
+
+        if (
+          sacador &&
+          !sacador.includes("/") &&
+          !isNaN(fechaFin) &&
+          fechaFin.getMonth() === mesActual &&
+          fechaFin.getFullYear() === añoActual &&
+          !isNaN(tiempoPorProducto)
+        ) {
+          if (!tiempos[sacador]) {
+            tiempos[sacador] = { total: 0, count: 0 };
+          }
+          tiempos[sacador].total += tiempoPorProducto;
+          tiempos[sacador].count += 1;
+        }
+      });
+
+      const promedios = Object.entries(tiempos).map(([sacador, datos]) => ({
+        sacador,
+        promedio: datos.total / datos.count
+      }));
+
+      const top3 = promedios
+        .sort((a, b) => a.promedio - b.promedio)
+        .slice(0, 3);
+
+      console.log("✅ Top 3 más rápidos:", top3);
+      mostrarRankingRapidos(top3);
+    })
+    .catch(err => console.error("❌ Error al obtener ranking:", err));
+}
+
+
+
+function mostrarRankingRapidos(top3) {
+  const medallas = ["🥇", "🥈", "🥉"];
+  const container = document.getElementById("card-ranking");
+
+ const lista = document.getElementById("lista-top-sacadores");
+lista.innerHTML = top3.map((item, i) => `
+  <li><span>${["🥇", "🥈", "🥉"][i] || ""}</span> <strong>${item.sacador}</strong>: ${item.promedio.toFixed(2)} min/prod</li>
+`).join("");
+
+}
+
+
+
+
+function mostrarHistorialGanadores() {
+  fetch("https://api.sheetbest.com/sheets/e5698a50-c77c-47ee-895a-eeb9c29c7a17")
+    .then(res => res.json())
+    .then(data => {
+      const historial = {};
+
+      data.forEach(pedido => {
+        const fecha = new Date(pedido["HoraFin "]);
+        if (isNaN(fecha)) return;
+
+        const mes = fecha.getMonth();
+        const año = fecha.getFullYear();
+        const claveMes = `${año}-${mes}`;
+        const sacador = pedido["Sacador "].trim();
+
+        if (!historial[claveMes]) historial[claveMes] = {};
+        historial[claveMes][sacador] = (historial[claveMes][sacador] || 0) + 1;
+      });
+
+      const ganadores = Object.entries(historial).map(([mesClave, sacadores]) => {
+        const [año, mes] = mesClave.split("-");
+        const mesNombre = obtenerNombreMes(parseInt(mes));
+        const [nombreGanador, cantidad] = Object.entries(sacadores)
+          .sort((a, b) => b[1] - a[1])[0];
+
+        return {
+          mes: `${mesNombre} ${año}`,
+          ganador: nombreGanador,
+          cantidad
+        };
+      });
+
+      renderizarHistorial(ganadores);
+    })
+    .catch(err => console.error("❌ Error al obtener historial:", err));
+}
+
+function toggleHistorial() {
+  const historialDiv = document.getElementById("historial-ganadores");
+  const icon = document.getElementById("toggle-icon");
+
+  if (historialDiv.style.display === "none") {
+    historialDiv.style.display = "block";
+    icon.textContent = "▲";
+  } else {
+    historialDiv.style.display = "none";
+    icon.textContent = "▼";
+  }
+}
+
+function mostrarHistorialGanadores() {
+  fetch("https://api.sheetbest.com/sheets/e5698a50-c77c-47ee-895a-eeb9c29c7a17")
+    .then(res => res.json())
+    .then(data => {
+      const historial = {};
+
+      data.forEach(pedido => {
+        const fecha = new Date(pedido["HoraFin "]);
+        if (isNaN(fecha)) return;
+
+        const mes = fecha.getMonth();
+        const año = fecha.getFullYear();
+        const claveMes = `${año}-${mes}`;
+        const sacador = pedido["Sacador "].trim();
+
+        if (!historial[claveMes]) historial[claveMes] = {};
+        historial[claveMes][sacador] = (historial[claveMes][sacador] || 0) + 1;
+      });
+
+      const ganadores = Object.entries(historial).map(([mesClave, sacadores]) => {
+        const [año, mes] = mesClave.split("-");
+        const mesNombre = obtenerNombreMes(parseInt(mes));
+        const [nombreGanador, cantidad] = Object.entries(sacadores)
+          .sort((a, b) => b[1] - a[1])[0];
+
+        return {
+          mes: `${mesNombre} ${año}`,
+          ganador: nombreGanador,
+          cantidad
+        };
+      });
+
+      renderizarHistorial(ganadores);
+    })
+    .catch(err => console.error("❌ Error al obtener historial:", err));
+}
+
+function obtenerNombreMes(mes) {
+  const nombres = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  return nombres[mes] || "Desconocido";
+}
+
+function renderizarHistorial(ganadores) {
+  const container = document.getElementById("historial-ganadores");
+
+  if (!container) {
+    console.warn("⚠️ Falta el contenedor #historial-ganadores");
+    return;
+  }
+
+  container.innerHTML = `
+    <ul class="historial-lista">
+      ${ganadores
+        .sort((a, b) => new Date(b.mes) - new Date(a.mes))
+        .map(g => `
+          <li><strong>${g.mes}</strong>: ${g.ganador} (${g.cantidad} pedidos)</li>
+        `).join("")}
+    </ul>
+  `;
+}
+
+function mostrarSacadoresDelMes() {
+  fetch("https://api.sheetbest.com/sheets/e5698a50-c77c-47ee-895a-eeb9c29c7a17")
+    .then(res => res.json())
+    .then(data => {
+      const ahora = new Date();
+      const mesActual = ahora.getMonth();
+      const añoActual = ahora.getFullYear();
+
+      const sacadores = {};
+
+      // Función para convertir 0:02:41 a minutos decimales
+      function tiempoAminutos(str) {
+        const partes = str.split(":");
+        if (partes.length !== 3) return NaN;
+        const [h, m, s] = partes.map(Number);
+        return h * 60 + m + s / 60;
+      }
+
+      data.forEach(pedido => {
+        const fechaStr = (pedido["HoraFin"] || pedido["HoraFin "] || "").trim();
+        const fecha = new Date(fechaStr);
+        if (isNaN(fecha)) return;
+
+        if (fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual) {
+          const sacadorRaw = (pedido["Sacador"] || pedido["Sacador "] || "Desconocido").trim();
+
+          // Filtrar equipos (contienen "/")
+          if (sacadorRaw.includes("/")) return;
+
+          const tiempoStr = (pedido["Tiempoitms"] || "").trim();
+          const tiempoPorProducto = tiempoAminutos(tiempoStr);
+          if (isNaN(tiempoPorProducto)) return;
+
+          if (!sacadores[sacadorRaw]) {
+            sacadores[sacadorRaw] = {
+              totalPedidos: 0,
+              sumaTiempos: 0,
+              cantidadTiempos: 0,
+            };
+          }
+
+          sacadores[sacadorRaw].totalPedidos++;
+          sacadores[sacadorRaw].sumaTiempos += tiempoPorProducto;
+          sacadores[sacadorRaw].cantidadTiempos++;
+        }
+      });
+
+      const sacadoresArray = Object.entries(sacadores).map(([nombre, datos]) => ({
+        nombre,
+        totalPedidos: datos.totalPedidos,
+        promedioTiempo: datos.sumaTiempos / datos.cantidadTiempos,
+      }));
+
+      sacadoresArray.sort((a, b) => a.promedioTiempo - b.promedioTiempo);
+
+      document.getElementById("mes-actual").textContent = `${obtenerNombreMes(mesActual)} ${añoActual}`;
+
+      const listaHTML = sacadoresArray.map(s => `
+        <li>
+          <strong>${s.nombre}</strong>: ${s.totalPedidos} pedido${s.totalPedidos !== 1 ? "s" : ""}, 
+          promedio <em>${s.promedioTiempo.toFixed(2)} min/producto</em>
+        </li>
+      `).join("");
+
+      document.getElementById("lista-sacadores").innerHTML = listaHTML;
+    })
+    .catch(err => console.error("❌ Error al cargar sacadores del mes:", err));
+}
+
+// Función toggle para desplegar la lista
+function toggleListaSacadores() {
+  const contenedor = document.getElementById("contenedor-sacadores");
+  if (!contenedor) return;
+  
+  // Alterna el display entre none y block para hacer acordeón
+  if (contenedor.style.display === "none" || contenedor.style.display === "") {
+    contenedor.style.display = "block";
+  } else {
+    contenedor.style.display = "none";
+  }
+}
+
+// Función para obtener nombre de mes
+function obtenerNombreMes(mes) {
+  const nombres = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  return nombres[mes] || "Mes desconocido";
+}
+
+// Ejecutar para cargar la lista al inicio
+mostrarSacadoresDelMes();
+
+
+
+mostrarHistorialGanadores();
+obtenerTop3SacadoresRapidos();
+mostrarSacadoresDelMes();
+
+
+let sacadoresArrayGlobal = []; // <- fuera de la función
+
+function mostrarSacadoresDelMes() {
+  fetch("https://api.sheetbest.com/sheets/e5698a50-c77c-47ee-895a-eeb9c29c7a17")
+    .then(res => res.json())
+    .then(data => {
+      const ahora = new Date();
+      const mesActual = ahora.getMonth();
+      const añoActual = ahora.getFullYear();
+
+      const sacadores = {};
+
+      function tiempoAminutos(str) {
+        const partes = str.split(":");
+        if (partes.length !== 3) return NaN;
+        const [h, m, s] = partes.map(Number);
+        return h * 60 + m + s / 60;
+      }
+
+      data.forEach(pedido => {
+        const fechaStr = (pedido["HoraFin"] || pedido["HoraFin "] || "").trim();
+        const fecha = new Date(fechaStr);
+        if (isNaN(fecha)) return;
+
+        if (fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual) {
+          const sacadorRaw = (pedido["Sacador"] || pedido["Sacador "] || "Desconocido").trim();
+          if (sacadorRaw.includes("/")) return;
+
+          const tiempoStr = (pedido["Tiempoitms"] || "").trim();
+          const tiempoPorProducto = tiempoAminutos(tiempoStr);
+          if (isNaN(tiempoPorProducto)) return;
+
+          if (!sacadores[sacadorRaw]) {
+            sacadores[sacadorRaw] = {
+              totalPedidos: 0,
+              sumaTiempos: 0,
+              cantidadTiempos: 0,
+            };
+          }
+
+          sacadores[sacadorRaw].totalPedidos++;
+          sacadores[sacadorRaw].sumaTiempos += tiempoPorProducto;
+          sacadores[sacadorRaw].cantidadTiempos++;
+        }
+      });
+
+      sacadoresArrayGlobal = Object.entries(sacadores).map(([nombre, datos]) => ({
+        Sacador: nombre,
+        "Pedidos Realizados": datos.totalPedidos,
+        "Promedio Tiempo (min)": parseFloat((datos.sumaTiempos / datos.cantidadTiempos).toFixed(2))
+      }));
+
+      sacadoresArrayGlobal.sort((a, b) => a["Promedio Tiempo (min)"] - b["Promedio Tiempo (min)"]);
+
+      document.getElementById("mes-actual").textContent = `${obtenerNombreMes(mesActual)} ${añoActual}`;
+
+      const listaHTML = sacadoresArrayGlobal.map(s => `
+        <li>
+          <strong>${s.Sacador}</strong>: ${s["Pedidos Realizados"]} pedido${s["Pedidos Realizados"] !== 1 ? "s" : ""}, 
+          promedio <em>${s["Promedio Tiempo (min)"]} min/producto</em>
+        </li>
+      `).join("");
+
+      document.getElementById("lista-sacadores").innerHTML = listaHTML;
+    })
+    .catch(err => console.error("❌ Error al cargar sacadores del mes:", err));
+}
