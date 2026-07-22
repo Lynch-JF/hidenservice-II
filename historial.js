@@ -182,7 +182,7 @@ function renderTablaHistorial() {
         <td style="padding:10px 12px;text-align:right;">${_formatTimeHist(h.tiempo_por_producto_segundos)}</td>
         <td style="padding:10px 12px;text-align:center;">
           <button type="button" class="btn-editar-historial" title="Editar registro"
-            onclick="abrirModalEditarHistorial(${h.id})"
+            onclick="abrirModalEditarHistorial('${h.id}')"
             style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;">
             ✏️
           </button>
