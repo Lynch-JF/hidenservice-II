@@ -117,6 +117,12 @@ function _formatFechaHist(timestamp) {
   return `${_pad2(d.getDate())}/${_pad2(d.getMonth() + 1)}/${d.getFullYear()} ${_pad2(d.getHours())}:${_pad2(d.getMinutes())}`;
 }
 
+function _toDatetimeLocal(timestamp) {
+  if (!timestamp) return "";
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${_pad2(d.getMonth() + 1)}-${_pad2(d.getDate())}T${_pad2(d.getHours())}:${_pad2(d.getMinutes())}`;
+}
+
 // ============================================================
 //  CARGAR / FILTRAR / RENDERIZAR
 // ============================================================
@@ -174,6 +180,13 @@ function renderTablaHistorial() {
         <td style="padding:10px 12px;">${_formatFechaHist(h.hora_fin)}</td>
         <td style="padding:10px 12px;text-align:right;">${_formatTimeHist(h.tiempo_total_segundos)}</td>
         <td style="padding:10px 12px;text-align:right;">${_formatTimeHist(h.tiempo_por_producto_segundos)}</td>
+        <td style="padding:10px 12px;text-align:center;">
+          <button type="button" class="btn-editar-historial" title="Editar registro"
+            onclick="abrirModalEditarHistorial(${h.id})"
+            style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;">
+            ✏️
+          </button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
@@ -200,6 +213,106 @@ function _actualizarStatsHistorial(filas) {
     .filter(h => h.rol === "Lider")
     .reduce((acc, h) => acc + Number(h.monto_final || 0), 0);
   document.getElementById("stat-hist-monto").textContent = `RD$ ${montoTotal.toFixed(2)}`;
+}
+
+// ============================================================
+//  EDICIÓN INDIVIDUAL DE REGISTROS
+// ============================================================
+function abrirModalEditarHistorial(id) {
+  const registro = _historialCache.find(h => h.id === id);
+  if (!registro) {
+    mostrarToastHistorial("⚠️ No se encontró el registro.", "error");
+    return;
+  }
+
+  document.getElementById("edit-error").classList.remove("visible");
+  document.getElementById("edit-id").value = registro.id;
+  document.getElementById("edit-codigo").value = registro.codigo_pedido || "";
+  document.getElementById("edit-sacador").value = registro.sacador || "";
+  document.getElementById("edit-rol").value = registro.rol || "Aux";
+  document.getElementById("edit-equipo").value = registro.equipo_completo || "";
+  document.getElementById("edit-productos").value = registro.cantidad_productos ?? "";
+  document.getElementById("edit-bultos").value = registro.bultos ?? "";
+  document.getElementById("edit-monto").value = registro.monto_final ?? "";
+  document.getElementById("edit-inicio").value = _toDatetimeLocal(registro.hora_inicio);
+  document.getElementById("edit-fin").value = _toDatetimeLocal(registro.hora_fin);
+
+  document.getElementById("modal-editar-historial-overlay").classList.add("open");
+}
+
+function cerrarModalEditarHistorial() {
+  document.getElementById("modal-editar-historial-overlay").classList.remove("open");
+}
+
+async function guardarEdicionHistorial() {
+  const id = document.getElementById("edit-id").value;
+  const errorEl = document.getElementById("edit-error");
+  errorEl.classList.remove("visible");
+
+  if (!id) return;
+
+  const codigo = document.getElementById("edit-codigo").value.trim();
+  const sacador = document.getElementById("edit-sacador").value.trim();
+
+  if (!codigo || !sacador) {
+    errorEl.textContent = "Código y sacador son obligatorios.";
+    errorEl.classList.add("visible");
+    return;
+  }
+
+  const inicio = document.getElementById("edit-inicio").value;
+  const fin = document.getElementById("edit-fin").value;
+  const productos = Number(document.getElementById("edit-productos").value) || 0;
+
+  const horaInicioISO = inicio ? new Date(inicio).toISOString() : null;
+  const horaFinISO = fin ? new Date(fin).toISOString() : null;
+
+  if (horaInicioISO && horaFinISO && new Date(horaFinISO) < new Date(horaInicioISO)) {
+    errorEl.textContent = "La hora de fin no puede ser anterior a la hora de inicio.";
+    errorEl.classList.add("visible");
+    return;
+  }
+
+  let tiempoTotal = 0;
+  if (horaInicioISO && horaFinISO) {
+    tiempoTotal = Math.max(0, Math.floor((new Date(horaFinISO) - new Date(horaInicioISO)) / 1000));
+  }
+  const tiempoPorProducto = productos > 0 ? Math.floor(tiempoTotal / productos) : 0;
+
+  const datos = {
+    codigo_pedido: codigo,
+    sacador: sacador,
+    rol: document.getElementById("edit-rol").value,
+    equipo_completo: document.getElementById("edit-equipo").value.trim(),
+    cantidad_productos: productos,
+    bultos: Number(document.getElementById("edit-bultos").value) || 0,
+    monto_final: Number(document.getElementById("edit-monto").value) || 0,
+    hora_inicio: horaInicioISO,
+    hora_fin: horaFinISO,
+    tiempo_total_segundos: tiempoTotal,
+    tiempo_por_producto_segundos: tiempoPorProducto
+  };
+
+  const btn = document.getElementById("btn-guardar-edicion-historial");
+  const textoOriginal = btn.textContent;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    await GMApi.actualizarHistorial(id, datos);
+
+    mostrarToastHistorial("✅ Registro actualizado correctamente.", "success");
+    cerrarModalEditarHistorial();
+    cargarHistorial();
+  } catch (err) {
+    console.error("❌ Error actualizando historial:", err);
+    errorEl.textContent = err.message || "Error al actualizar el registro.";
+    errorEl.classList.add("visible");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+  }
 }
 
 // ============================================================
