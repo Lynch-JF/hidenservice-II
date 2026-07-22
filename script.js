@@ -1,28 +1,409 @@
 // ============================================================
-//  SCRIPT PRINCIPAL v2 — Dependencia 100% del Backend + Supabase
+//  SCRIPT PRINCIPAL v3 — Backend + Supabase + Motor de Tiempo Laboral
 //  Requiere gm-api.js cargado ANTES
+//  El tiempo transcurrido se calcula SIEMPRE a partir de los
+//  timestamps reales guardados en `segmentos` (no en memoria),
+//  por eso sobrevive a recargas / cierre de pestaña.
 // ============================================================
 
 // ── ESTADO GLOBAL ──
-let pedidosActivos = {}; // { id_pedido: { ...datos, timerInterval, segmentosLocales } }
+let pedidosActivos = {}; // { id_pedido: { ...datos, segmentos, paused, ... } }
 let timers = {};
-let pausedTimers = {};
+let badgeTimers = {};
 
 const UMBRAL_EQUIPO = 100;
 
 // ============================================================
-//  AUTENTICACIÓN
+//  DÍAS FERIADOS (cliente — igual que antes)
 // ============================================================
+function cargarFeriados() {
+  try {
+    return JSON.parse(localStorage.getItem("feriados_no_laborables") || "[]");
+  } catch { return []; }
+}
+
+function guardarFeriados(lista) {
+  localStorage.setItem("feriados_no_laborables", JSON.stringify(lista));
+}
+
+function esFeriado(fecha) {
+  const key = `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}`;
+  return cargarFeriados().includes(key);
+}
+
+const FERIADOS_RD_2025 = [
+  "2025-01-01", "2025-01-06", "2025-01-21", "2025-02-27", "2025-04-14",
+  "2025-04-18", "2025-05-01", "2025-06-19", "2025-08-16", "2025-09-24",
+  "2025-11-06", "2025-12-25"
+];
+const FERIADOS_RD_2026 = [
+  "2026-01-01", "2026-01-06", "2026-01-26", "2026-02-27", "2026-04-03",
+  "2026-04-06", "2026-05-01", "2026-06-29", "2026-08-16", "2026-09-24",
+  "2026-11-06", "2026-12-25"
+];
+
+function precargarFeriadosRD() {
+  if (cargarFeriados().length === 0) {
+    guardarFeriados([...FERIADOS_RD_2025, ...FERIADOS_RD_2026]);
+    console.log("✅ Feriados dominicanos 2025-2026 precargados.");
+  }
+}
+
+// ============================================================
+//  PANEL DE FERIADOS — UI (igual que antes)
+// ============================================================
+function abrirPanelFeriados() {
+  let overlay = document.getElementById("modal-feriados-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "modal-feriados-overlay";
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal" id="modal-feriados" style="max-width:480px;">
+        <div class="modal-header">
+          <h3 class="modal-title">🗓 Días Feriados No Laborables</h3>
+          <button class="btn-delete" onclick="cerrarPanelFeriados()" title="Cerrar">✕</button>
+        </div>
+        <div class="modal-subtitle" id="feriados-subtitle">
+          Agrega las fechas que deben excluirse del cálculo de tiempo laborable.
+        </div>
+        <div id="modal-feriados-body" style="padding:16px 20px;"></div>
+        <div class="modal-footer" id="modal-feriados-footer"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add("open");
+  renderPanelFeriados();
+}
+
+function cerrarPanelFeriados() {
+  const overlay = document.getElementById("modal-feriados-overlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+function renderPanelFeriados() {
+  const body = document.getElementById("modal-feriados-body");
+  const footer = document.getElementById("modal-feriados-footer");
+  const lista = cargarFeriados().sort();
+
+  const itemsHTML = lista.length === 0
+    ? `<p style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0;">No hay feriados registrados.</p>`
+    : lista.map(f => {
+        const d = new Date(f + "T12:00:00");
+        const label = d.toLocaleDateString("es-DO", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+        return `
+          <div class="feriado-item" style="display:flex;align-items:center;justify-content:space-between;
+               padding:8px 10px;margin-bottom:6px;background:var(--surface2,#1e1e2e);
+               border-radius:8px;gap:8px;">
+            <span style="font-size:13px;">📅 <strong>${f}</strong> — ${label}</span>
+            <button class="btn-delete" style="font-size:11px;" onclick="eliminarFeriado('${f}')" title="Eliminar">✕</button>
+          </div>`;
+      }).join("");
+
+  body.innerHTML = `
+    ${itemsHTML}
+    <div style="margin-top:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="date" id="feriado-input"
+             style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#333);
+                    background:var(--surface2,#1e1e2e);color:inherit;font-size:13px;"
+             min="${new Date().getFullYear()}-01-01" />
+      <input type="text" id="feriado-nombre" placeholder="Nombre (opcional)"
+             style="flex:2;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#333);
+                    background:var(--surface2,#1e1e2e);color:inherit;font-size:13px;" />
+    </div>
+    <p id="feriado-error" class="modal-hint error-msg" style="margin-top:6px;"></p>
+  `;
+
+  footer.innerHTML = `
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding:12px 20px;">
+      <button class="modal-btn secondary" onclick="cerrarPanelFeriados()">Cerrar</button>
+      <button class="modal-btn primary"   onclick="agregarFeriado()">+ Agregar Feriado</button>
+    </div>
+  `;
+}
+
+function agregarFeriado() {
+  const input = document.getElementById("feriado-input");
+  const errorEl = document.getElementById("feriado-error");
+  const fecha = input.value.trim();
+
+  if (!fecha) {
+    errorEl.textContent = "Selecciona una fecha.";
+    errorEl.classList.add("visible");
+    input.focus();
+    return;
+  }
+
+  const lista = cargarFeriados();
+  if (lista.includes(fecha)) {
+    errorEl.textContent = "Esa fecha ya está registrada.";
+    errorEl.classList.add("visible");
+    return;
+  }
+
+  lista.push(fecha);
+  guardarFeriados(lista);
+  mostrarToast(`📅 Feriado agregado: ${fecha}`, "info");
+  renderPanelFeriados();
+}
+
+function eliminarFeriado(fecha) {
+  const lista = cargarFeriados().filter(f => f !== fecha);
+  guardarFeriados(lista);
+  mostrarToast(`🗑 Feriado eliminado: ${fecha}`, "warn");
+  renderPanelFeriados();
+}
+
+// ============================================================
+//  HORARIOS LABORABLES
+// ============================================================
+const HORA_ENTRADA = "08:00:00";
+
+const HORARIO_SALIDA_PERSONAL = {
+  "Elvin Manuel Villar Holguin":       { lun_jue: "18:00:00", vie: "17:00:00", sab: null },
+  "Fernando Robles Grullon":           { lun_jue: "17:00:00", vie: "17:00:00", sab: null },
+  "Clara Elvira Fanith Perez":         { lun_jue: "18:00:00", vie: "17:00:00", sab: null },
+  "Omar Marmolejos Fajardo":           { lun_jue: "17:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Jairo Fernandez Salcedo":           { lun_jue: "17:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Juan De Jesús Peña Pérez":          { lun_jue: "17:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Luis David Nuñez Santos":           { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Cirilo Reynoso Acevedo":            { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Enrique Nuñez Brito":               { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Luis Eduardo Reyes":                { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Bryhan Santo Cordero":              { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Wilkin Ortega Diaz":                { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Yan Carlos Cruz Paulino":           { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Fernando Antonio Burgos Cabrera":   { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Omelbe Gomez Valdez":               { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Ismael Augusto Veras Lasuse":       { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
+  "Anyelo Morel Acosta":               { lun_jue: "18:00:00", vie: "17:00:00", sab: null },
+  "Oscar De Jesús De La Cruz Reinoso": { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" }
+};
+
+const HORARIO_SALIDA_DEFAULT = { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" };
+
+function getSalidaPersonal(sacador, dia) {
+  const h = HORARIO_SALIDA_PERSONAL[sacador] || HORARIO_SALIDA_DEFAULT;
+  if (dia >= 1 && dia <= 4) return h.lun_jue;
+  if (dia === 5) return h.vie;
+  if (dia === 6) return h.sab;
+  return null;
+}
+
+// ── Breaks de 10 minutos ─────────────────────────────────────
+const BREAKS_10MIN = {
+  "Omar Marmolejos Fajardo":         [{ hora: "10:00:00", durMin: 10 }, { hora: "12:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Jairo Fernandez Salcedo":         [{ hora: "10:00:00", durMin: 10 }, { hora: "12:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Juan De Jesús Peña Pérez":        [{ hora: "10:00:00", durMin: 10 }, { hora: "12:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Luis David Nuñez Santos":         [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Cirilo Reynoso Acevedo":          [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Enrique Nuñez Brito":             [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Luis Eduardo Reyes":              [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Bryhan Santo Cordero":            [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Wilkin Ortega Diaz":              [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Yan Carlos Cruz Paulino":         [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Fernando Antonio Burgos Cabrera": [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Omelbe Gomez Valdez":             [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
+  "Oscar De Jesús De La Cruz Reinoso": [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }]
+};
+
+// ── Almuerzo individual ───────────────────────────────────────
+const INDIVIDUAL_PAUSES = {
+  "Elvin Manuel Villar Holguin":       { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Fernando Robles Grullon":           { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Clara Elvira Fanith Perez":         { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Omar Marmolejos Fajardo":           { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Jairo Fernandez Salcedo":           { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Ismael Augusto Veras Lasuse":       { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Fernando Antonio Burgos Cabrera":   { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Juan De Jesús Peña Pérez":          { pausa: "13:00:00", reanuda: "14:00:00" },
+  "Luis David Nuñez Santos":           { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Yustin Alexander Mendez":           { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Luis Eduardo Reyes":                { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Omelbe Gomez Valdez":               { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Bryhan Santo Cordero":              { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Enrique Nuñez Brito":               { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Cirilo Reynoso Acevedo":            { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Yan Carlos Cruz Paulino":           { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Wilkin Ortega Diaz":                { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Anyelo Morel Acosta":               { pausa: "12:00:00", reanuda: "14:00:00" },
+  "Oscar De Jesús De La Cruz Reinoso": { pausa: "12:00:00", reanuda: "14:00:00" }
+};
+
+// Lista de sacadores usada en los selects de auxiliar/equipo
+const TODOS_LOS_SACADORES = [
+  "Omar Marmolejos Fajardo", "Jairo Fernandez Salcedo", "Ismael Augusto Veras Lasuse",
+  "Fernando Antonio Burgos Cabrera", "Juan De Jesús Peña Pérez", "Luis David Nuñez Santos",
+  "Yustin Alexander Mendez", "Luis Eduardo Reyes", "Omelbe Gomez Valdez",
+  "Bryhan Santo Cordero", "Enrique Nuñez Brito", "Cirilo Reynoso Acevedo",
+  "Yan Carlos Cruz Paulino", "Wilkin Ortega Diaz", "Oscar De Jesús De La Cruz Reinoso"
+];
+
+// ============================================================
+//  MOTOR DE TIEMPO LABORABLE
+// ============================================================
+function pad(n) { return String(n).padStart(2, "0"); }
+
+function hhmmssASeg(str) {
+  const [h, m, s] = str.split(":").map(Number);
+  return h * 3600 + m * 60 + (s || 0);
+}
 
 /**
- * Inicializa el estado de autenticación al cargar la página
+ * Devuelve los rangos [inicioSeg, finSeg] laborables del sacador
+ * para la fecha dada. Delega en getRangosConExtras si horasextras.js
+ * está cargado (para horarios especiales / domingos habilitados).
  */
+function getRangosLaboralesDia(fecha, sacador) {
+  const dia = fecha.getDay();
+  if (dia === 0) return [];
+  if (esFeriado(fecha)) return [];
+
+  const salidaStr = getSalidaPersonal(sacador, dia);
+  if (!salidaStr) return [];
+
+  const entrada = hhmmssASeg(HORA_ENTRADA);
+  const salida = hhmmssASeg(salidaStr);
+
+  const pausas = [];
+
+  if (dia !== 6 && INDIVIDUAL_PAUSES[sacador]) {
+    pausas.push({
+      inicio: hhmmssASeg(INDIVIDUAL_PAUSES[sacador].pausa),
+      fin: hhmmssASeg(INDIVIDUAL_PAUSES[sacador].reanuda)
+    });
+  }
+
+  if (dia >= 1 && dia <= 4 && BREAKS_10MIN[sacador]) {
+    for (const b of BREAKS_10MIN[sacador]) {
+      const ini = hhmmssASeg(b.hora);
+      const fin = ini + b.durMin * 60;
+      if (ini >= entrada && fin <= salida) {
+        pausas.push({ inicio: ini, fin });
+      }
+    }
+  }
+
+  pausas.sort((a, b) => a.inicio - b.inicio);
+
+  const rangos = [];
+  let cursor = entrada;
+  for (const p of pausas) {
+    if (p.inicio > cursor && p.inicio < salida) {
+      rangos.push([cursor, Math.min(p.inicio, salida)]);
+    }
+    cursor = Math.max(cursor, p.fin);
+  }
+  if (cursor < salida) rangos.push([cursor, salida]);
+
+  if (typeof getRangosConExtras === "function") {
+    return getRangosConExtras(fecha, sacador, rangos);
+  }
+  return rangos;
+}
+
+function calcularSegLaborables(sacador, desdeMs, hastaMs) {
+  if (hastaMs <= desdeMs) return 0;
+
+  let total = 0;
+  const desde = new Date(desdeMs);
+  const hasta = new Date(hastaMs);
+
+  const inicioDia = new Date(desde);
+  inicioDia.setHours(0, 0, 0, 0);
+
+  let cursor = new Date(inicioDia);
+
+  while (cursor < hasta) {
+    const finDia = new Date(cursor);
+    finDia.setHours(23, 59, 59, 999);
+
+    const limSup = finDia < hasta ? finDia : hasta;
+    const limInf = cursor < desde ? desde : cursor;
+
+    const rangos = getRangosLaboralesDia(cursor, sacador);
+
+    for (const [rInicio, rFin] of rangos) {
+      const rInicioMs = new Date(cursor).setHours(
+        Math.floor(rInicio / 3600), Math.floor((rInicio % 3600) / 60), rInicio % 60, 0
+      );
+      const rFinMs = new Date(cursor).setHours(
+        Math.floor(rFin / 3600), Math.floor((rFin % 3600) / 60), rFin % 60, 0
+      );
+
+      const solapInicio = Math.max(rInicioMs, limInf.getTime());
+      const solapFin = Math.min(rFinMs, limSup.getTime());
+
+      if (solapFin > solapInicio) {
+        total += Math.floor((solapFin - solapInicio) / 1000);
+      }
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+    cursor.setHours(0, 0, 0, 0);
+  }
+
+  return total;
+}
+
+/**
+ * Calcula el tiempo laborable (ms) de un pedido a partir de sus
+ * segmentos reales (inicio/fin en ISO string o ms). Cada segmento
+ * se recorta automáticamente contra almuerzo/breaks/feriados/fuera
+ * de horario vía calcularSegLaborables — por eso NO importa si la
+ * pestaña estuvo cerrada durante ese tramo, el cálculo es correcto
+ * igual con solo recargar la página.
+ */
+function calcularElapsedMs(data, nowMs) {
+  if (data.estatus === "Finalizado") return data.elapsedMsFinal || 0;
+
+  if (!data.segmentos || data.segmentos.length === 0) {
+    data.segmentos = [{ inicio: data.hora_inicio, fin: data.paused ? (data.hora_inicio) : null }];
+  }
+
+  let totalSeg = 0;
+  for (const seg of data.segmentos) {
+    const inicioMs = typeof seg.inicio === "number" ? seg.inicio : new Date(seg.inicio).getTime();
+    const finMs = seg.fin === null || seg.fin === undefined
+      ? nowMs
+      : (typeof seg.fin === "number" ? seg.fin : new Date(seg.fin).getTime());
+    totalSeg += calcularSegLaborables(data.sacador, inicioMs, finMs);
+  }
+  return totalSeg * 1000;
+}
+
+// ============================================================
+//  UTILIDADES DE FORMATO
+// ============================================================
+function formatDateTime(date) {
+  if (!(date instanceof Date)) date = new Date(date);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function formatTime(totalSeconds) {
+  totalSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+function formatearFecha(timestamp) {
+  const d = new Date(timestamp);
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// ============================================================
+//  AUTENTICACIÓN
+// ============================================================
 async function inicializarAutenticacion() {
   const token = GMApi.getToken();
   const usuario = GMApi.getUsuario();
 
   if (!token || !usuario) {
-    // Mostrar solo el modal de login
     document.getElementById("modal-login-overlay").classList.add("open");
     document.getElementById("main-app").style.display = "none";
     document.getElementById("btn-float-extras").style.display = "none";
@@ -30,16 +411,13 @@ async function inicializarAutenticacion() {
   }
 
   try {
-    // Verificar que el token sea válido
     await GMApi.obtenerUsuarioActual();
 
-    // Token válido: mostrar la app
     document.getElementById("modal-login-overlay").classList.remove("open");
     document.getElementById("main-app").style.display = "block";
     document.getElementById("btn-float-extras").style.display = "flex";
     document.getElementById("usuario-nombre").textContent = usuario.nombre || "Usuario";
 
-    // Cargar datos iniciales
     cargarPedidosDelBackend();
   } catch (err) {
     console.error("❌ Error verificando sesión:", err);
@@ -48,9 +426,6 @@ async function inicializarAutenticacion() {
   }
 }
 
-/**
- * Realiza el login del usuario
- */
 async function autenticar() {
   const email = document.getElementById("login-email").value.trim();
   const password = document.getElementById("login-password").value;
@@ -71,18 +446,15 @@ async function autenticar() {
 
     const { token, usuario } = await GMApi.login(email, password);
 
-    // Login exitoso
     console.log("✅ Autenticación exitosa:", usuario.nombre);
     loadingEl.style.display = "none";
     errorEl.classList.remove("visible");
 
-    // Actualizar UI
     document.getElementById("modal-login-overlay").classList.remove("open");
     document.getElementById("main-app").style.display = "block";
     document.getElementById("btn-float-extras").style.display = "flex";
     document.getElementById("usuario-nombre").textContent = usuario.nombre || "Usuario";
 
-    // Cargar pedidos del backend
     cargarPedidosDelBackend();
     mostrarToast(`¡Bienvenido, ${usuario.nombre}! 👋`, "success");
   } catch (err) {
@@ -94,9 +466,6 @@ async function autenticar() {
   }
 }
 
-/**
- * Cierra la sesión actual
- */
 function cerrarSesion() {
   if (confirm("¿Cerrar sesión?")) {
     mostrarToast("Sesión cerrada. Hasta pronto 👋", "info");
@@ -109,25 +478,17 @@ function cerrarSesion() {
 // ============================================================
 //  CARGAR PEDIDOS DEL BACKEND
 // ============================================================
-
-/**
- * Obtiene todos los pedidos del backend y los renderiza en la UI
- */
 async function cargarPedidosDelBackend() {
   try {
-    // Obtener pedidos En Proceso (activos y pausados)
     const pedidosEnProceso = await GMApi.obtenerPedidos("En Proceso");
     const pedidosPausados = await GMApi.obtenerPedidos("Pausado");
     const pedidosFinalizados = await GMApi.obtenerPedidos("Finalizado");
 
-    // Combinar todos
     const todosPedidos = [...pedidosEnProceso, ...pedidosPausados, ...pedidosFinalizados];
 
-    // Limpiar UI
     const taskList = document.getElementById("task-list");
     taskList.innerHTML = "";
 
-    // Procesar cada pedido
     for (const pedido of todosPedidos) {
       await renderizarPedido(pedido);
     }
@@ -141,32 +502,51 @@ async function cargarPedidosDelBackend() {
 }
 
 /**
- * Renderiza un pedido individual desde el backend
+ * Renderiza un pedido individual desde el backend.
+ * Usa los `segmentos` reales que vienen de Supabase para que el
+ * tiempo laborable se recalcule correctamente sin importar cuánto
+ * tiempo estuvo la página cerrada.
  */
 async function renderizarPedido(pedido) {
-  const { id, numero_pedido, sacador, cantidad_referencias, hora_inicio, estatus, auxiliares, tiene_equipo } = pedido;
+  const { id, numero_pedido, sacador, cantidad_referencias, hora_inicio, hora_fin,
+    estatus, auxiliares, tiene_equipo, segmentos, tiempo_total_segundos } = pedido;
 
-  // Crear estado local para el pedido
+  let segmentosLocales = Array.isArray(segmentos) && segmentos.length > 0
+    ? segmentos
+    : [{ inicio: hora_inicio, fin: estatus === "Finalizado" ? hora_fin : null }];
+
   pedidosActivos[id] = {
     id,
     numero_pedido,
     sacador,
     cantidad_referencias,
     hora_inicio,
+    hora_fin,
     estatus,
     auxiliares: auxiliares || [],
     tiene_equipo: tiene_equipo || false,
-    elapsedMs: 0,
-    paused: estatus === "Pausado"
+    segmentos: segmentosLocales,
+    paused: estatus === "Pausado",
+    elapsedMsFinal: estatus === "Finalizado" ? (tiempo_total_segundos || 0) * 1000 : 0
   };
 
-  // Crear tarjeta en UI
   crearTarjeta(pedido);
 
-  // Si está activo (no finalizado), iniciar timer
-  if (estatus !== "Finalizado") {
+  if (estatus === "Finalizado") {
+    const data = pedidosActivos[id];
+    const cantSacada = pedido.cantidad_sacada;
+    const timerEl = document.getElementById(`timer-${id}`);
+    if (timerEl) timerEl.textContent = formatTime(Math.floor(data.elapsedMsFinal / 1000));
+    const tppWrap = document.getElementById(`tpp-wrap-${id}`);
+    const tppEl = document.getElementById(`tpp-${id}`);
+    if (tppWrap) tppWrap.style.display = "block";
+    if (tppEl && cantSacada > 0) {
+      tppEl.textContent = formatTime(Math.floor(data.elapsedMsFinal / 1000 / cantSacada));
+    }
+  } else {
     iniciarTimer(id);
-    if (!pedido.paused) {
+    iniciarBadgeTimer(id);
+    if (!pedidosActivos[id].paused) {
       programarPausas(id, sacador, new Date());
     }
   }
@@ -175,7 +555,6 @@ async function renderizarPedido(pedido) {
 // ============================================================
 //  AGREGAR PEDIDO NUEVO
 // ============================================================
-
 async function agregarPedido() {
   const codigo = document.getElementById("codigo").value.trim();
   const sacador = document.getElementById("sacador").value;
@@ -187,7 +566,6 @@ async function agregarPedido() {
     return;
   }
 
-  // Verificar que no sea domingo (salvo con día especial)
   if (now.getDay() === 0) {
     const tieneEspecial = typeof _tieneDiaEspecialHoy === "function" && _tieneDiaEspecialHoy(sacador);
     if (!tieneEspecial) {
@@ -196,20 +574,17 @@ async function agregarPedido() {
     }
   }
 
-  // Verificar que no sea feriado
   if (esFeriado(now)) {
     mostrarToast("🚫 Hoy es un día feriado no laborable.", "error");
     return;
   }
 
   try {
-    // Si cantidad >= umbral, mostrar modal de equipo
     if (cantidad >= UMBRAL_EQUIPO) {
       _abrirModalEquipoNuevo(codigo, sacador, cantidad);
       return;
     }
 
-    // Crear sin equipo
     await _crearPedidoEnBackend(codigo, sacador, cantidad, false, []);
   } catch (err) {
     console.error("❌ Error al agregar pedido:", err.message);
@@ -261,15 +636,7 @@ function _agregarFilaAuxNueva() {
   fila.className = "equipo-aux-item";
   fila.id = id;
 
-  const TODOS = [
-    "Omar Marmolejos Fajardo", "Jairo Fernandez Salcedo", "Ismael Augusto Veras Lasuse",
-    "Fernando Antonio Burgos Cabrera", "Juan De Jesús Peña Pérez", "Luis David Nuñez Santos",
-    "Yustin Alexander Mendez", "Luis Eduardo Reyes", "Omelbe Gomez Valdez",
-    "Bryhan Santo Cordero", "Enrique Nuñez Brito", "Cirilo Reynoso Acevedo",
-    "Yan Carlos Cruz Paulino", "Wilkin Ortega Diaz", "Oscar De Jesús De La Cruz Reinoso"
-  ];
-
-  const opciones = TODOS
+  const opciones = TODOS_LOS_SACADORES
     .filter(s => s !== _pendientePedidoNuevo.sacador)
     .map(s => `<option value="${s}">${s}</option>`)
     .join("");
@@ -355,10 +722,8 @@ async function _crearPedidoEnBackend(codigo, sacador, cantidad, tieneEquipo, aux
     auxiliares.map(nombre => ({ nombre, joined_at: ahora }))
   );
 
-  // Renderizar el pedido que nos devuelve el backend
   await renderizarPedido(pedidoBackend);
 
-  // Limpiar form
   document.getElementById("codigo").value = "";
   document.getElementById("sacador").value = "";
   document.getElementById("cantidad").value = "";
@@ -371,44 +736,80 @@ async function _crearPedidoEnBackend(codigo, sacador, cantidad, tieneEquipo, aux
 
 // ============================================================
 //  PAUSAR / REANUDAR
+//  Cierra/abre un segmento real y lo persiste en el backend, así
+//  el estado sobrevive a un refresh incluso si el auto-pause
+//  programado nunca llegó a dispararse (pestaña cerrada, etc.) —
+//  y aunque eso pase, calcularSegLaborables igual descuenta el
+//  tramo no laborable automáticamente.
 // ============================================================
+async function _persistirSegmentos(id, estatusNuevo) {
+  const data = pedidosActivos[id];
+  await GMApi.actualizarPedido(id, {
+    estatus: estatusNuevo,
+    segmentos: data.segmentos
+  });
+}
 
-async function pausar(id) {
+async function pausar(id, tipo = "manual") {
+  const data = pedidosActivos[id];
+  if (!data || data.paused || data.estatus === "Finalizado") return;
+
+  const ahora = new Date().toISOString();
+  const ultimo = data.segmentos[data.segmentos.length - 1];
+  if (ultimo && ultimo.fin === null) ultimo.fin = ahora;
+
+  data.paused = true;
+  data.estatus = "Pausado";
+
   try {
-    const updates = { estatus: "Pausado" };
-    await GMApi.actualizarPedido(id, updates);
+    await _persistirSegmentos(id, "Pausado");
 
-    pedidosActivos[id].paused = true;
     const btn = document.querySelector(`#card-${id} .btn-pause`);
     if (btn) {
       btn.textContent = "⏸ Pausado";
       btn.classList.add("paused");
     }
 
+    renderBadgePausa(id);
     actualizarStats();
-    mostrarToast("⏸ Pedido pausado", "info");
+    if (tipo === "manual") mostrarToast("⏸ Pedido pausado", "info");
   } catch (err) {
     console.error("❌ Error pausando pedido:", err);
+    data.paused = false;
+    data.estatus = "En Proceso";
+    if (ultimo) ultimo.fin = null;
     mostrarToast("❌ Error al pausar pedido.", "error");
   }
 }
 
 async function reanudar(id) {
-  try {
-    const updates = { estatus: "En Proceso" };
-    await GMApi.actualizarPedido(id, updates);
+  const data = pedidosActivos[id];
+  if (!data || !data.paused || data.estatus === "Finalizado") return;
 
-    pedidosActivos[id].paused = false;
+  const ahora = new Date().toISOString();
+  data.segmentos.push({ inicio: ahora, fin: null });
+  data.paused = false;
+  data.estatus = "En Proceso";
+
+  try {
+    await _persistirSegmentos(id, "En Proceso");
+
     const btn = document.querySelector(`#card-${id} .btn-pause`);
     if (btn) {
       btn.textContent = "⏸ Pausar";
       btn.classList.remove("paused");
     }
 
+    iniciarTimer(id);
+    programarPausas(id, data.sacador, new Date());
+    renderBadgePausa(id);
     actualizarStats();
     mostrarToast("▶ Pedido reanudado", "info");
   } catch (err) {
     console.error("❌ Error reanudando pedido:", err);
+    data.segmentos.pop();
+    data.paused = true;
+    data.estatus = "Pausado";
     mostrarToast("❌ Error al reanudar pedido.", "error");
   }
 }
@@ -417,7 +818,7 @@ async function pausarTodos() {
   for (const id in pedidosActivos) {
     const data = pedidosActivos[id];
     if (!data.paused && data.estatus !== "Finalizado") {
-      await pausar(id);
+      await pausar(id, "manual");
     }
   }
 }
@@ -432,9 +833,117 @@ async function reanudarTodos() {
 }
 
 // ============================================================
+//  PAUSAS AUTOMÁTICAS PROGRAMADAS (almuerzo / breaks / salida)
+// ============================================================
+function addDays(date, d) {
+  const nd = new Date(date);
+  nd.setDate(date.getDate() + d);
+  return nd;
+}
+
+function getFutureTime(date, timeStr) {
+  const [h, m, s] = timeStr.split(":").map(Number);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m, s);
+}
+
+function diasHastaProximoLaborable(desde) {
+  let dias = 1;
+  while (dias <= 7) {
+    const candidato = addDays(desde, dias);
+    if (candidato.getDay() !== 0 && !esFeriado(candidato)) return dias;
+    dias++;
+  }
+  return 1;
+}
+
+function programarPausas(id, sacador, now) {
+  const dia = now.getDay();
+
+  if (dia !== 6 && INDIVIDUAL_PAUSES[sacador]) {
+    const p1 = getFutureTime(now, INDIVIDUAL_PAUSES[sacador].pausa);
+    const r1 = getFutureTime(now, INDIVIDUAL_PAUSES[sacador].reanuda);
+    if (p1 > now) setTimeout(() => pausar(id, "almuerzo"), p1 - now);
+    if (r1 > now) setTimeout(() => reanudar(id), r1 - now);
+  }
+
+  if (dia >= 1 && dia <= 4 && BREAKS_10MIN[sacador]) {
+    for (const b of BREAKS_10MIN[sacador]) {
+      const pBreak = getFutureTime(now, b.hora);
+      const rBreak = new Date(pBreak.getTime() + b.durMin * 60 * 1000);
+      if (pBreak > now) setTimeout(() => pausar(id, "break"), pBreak - now);
+      if (rBreak > now) setTimeout(() => reanudar(id), rBreak - now);
+    }
+  }
+
+  const salidaStr = getSalidaPersonal(sacador, dia);
+  if (salidaStr) {
+    const pausaSalida = getFutureTime(now, salidaStr);
+    const diasHasta = diasHastaProximoLaborable(now);
+    const reanuda = getFutureTime(addDays(now, diasHasta), HORA_ENTRADA);
+    if (pausaSalida > now) setTimeout(() => pausar(id, "salida"), pausaSalida - now);
+    if (reanuda > now) setTimeout(() => reanudar(id), reanuda - now);
+  }
+}
+
+// ============================================================
+//  BADGE DE PRÓXIMA PAUSA
+// ============================================================
+function calcularProximaPausa(sacador, now) {
+  const eventos = [];
+  const dia = now.getDay();
+
+  if (dia !== 6 && INDIVIDUAL_PAUSES[sacador]) {
+    const p = getFutureTime(now, INDIVIDUAL_PAUSES[sacador].pausa);
+    if (p > now) eventos.push({ label: "🍽 Almuerzo", time: p, tipo: "almuerzo" });
+  }
+
+  if (dia >= 1 && dia <= 4 && BREAKS_10MIN[sacador]) {
+    for (const b of BREAKS_10MIN[sacador]) {
+      const p = getFutureTime(now, b.hora);
+      if (p > now) eventos.push({ label: `☕ Break ${b.durMin}min`, time: p, tipo: "break" });
+    }
+  }
+
+  const salidaStr = getSalidaPersonal(sacador, dia);
+  if (salidaStr) {
+    const p = getFutureTime(now, salidaStr);
+    if (p > now) eventos.push({ label: "🚪 Salida", time: p, tipo: "salida" });
+  }
+
+  if (!eventos.length) return null;
+  eventos.sort((a, b) => a.time - b.time);
+  return eventos[0];
+}
+
+function renderBadgePausa(id) {
+  const data = pedidosActivos[id];
+  const badgeEl = document.getElementById(`badge-pausa-${id}`);
+  if (!badgeEl || !data || data.estatus === "Finalizado" || data.paused) {
+    if (badgeEl) badgeEl.style.display = "none";
+    return;
+  }
+  const prox = calcularProximaPausa(data.sacador, new Date());
+  if (!prox) { badgeEl.style.display = "none"; return; }
+  const diffMs = prox.time - Date.now();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const remMin = diffMin % 60;
+  const textoTiempo = diffH > 0 ? `en ${diffH}h ${pad(remMin)}m` : `en ${diffMin}m`;
+  const esPronto = diffMin <= 15;
+  badgeEl.textContent = `${prox.label} ${textoTiempo}`;
+  badgeEl.className = `badge-pausa tipo-${prox.tipo}${esPronto ? " tipo-pronto" : ""}`;
+  badgeEl.style.display = "inline-flex";
+}
+
+function iniciarBadgeTimer(id) {
+  if (badgeTimers[id]) clearInterval(badgeTimers[id]);
+  badgeTimers[id] = setInterval(() => renderBadgePausa(id), 60000);
+  renderBadgePausa(id);
+}
+
+// ============================================================
 //  ELIMINAR
 // ============================================================
-
 async function eliminar(id) {
   if (!confirm("¿Eliminar este pedido?")) return;
 
@@ -442,7 +951,9 @@ async function eliminar(id) {
     await GMApi.eliminarPedido(id);
 
     clearInterval(timers[id]);
+    clearInterval(badgeTimers[id]);
     delete timers[id];
+    delete badgeTimers[id];
     delete pedidosActivos[id];
 
     const card = document.getElementById(`card-${id}`);
@@ -470,7 +981,9 @@ async function eliminarTodos() {
     try {
       await GMApi.eliminarPedido(id);
       clearInterval(timers[id]);
+      clearInterval(badgeTimers[id]);
       delete timers[id];
+      delete badgeTimers[id];
       delete pedidosActivos[id];
 
       const card = document.getElementById(`card-${id}`);
@@ -482,15 +995,15 @@ async function eliminarTodos() {
 
   pedidosActivos = {};
   timers = {};
+  badgeTimers = {};
   actualizarStats();
   aplicarFiltro();
   mostrarToast("🗑 Todos los pedidos fueron eliminados", "warn");
 }
 
 // ============================================================
-//  TIMER
+//  TIMER — recalcula siempre desde los segmentos reales
 // ============================================================
-
 function iniciarTimer(id) {
   if (timers[id]) clearInterval(timers[id]);
 
@@ -501,14 +1014,10 @@ function iniciarTimer(id) {
       return;
     }
 
-    // Sumar 500ms cada intervalo (se actualiza cada 500ms)
-    if (!data.paused) {
-      data.elapsedMs += 500;
-    }
-
+    const elapsedMs = calcularElapsedMs(data, Date.now());
     const timerEl = document.getElementById(`timer-${id}`);
     if (timerEl) {
-      timerEl.textContent = formatTime(Math.floor(data.elapsedMs / 1000));
+      timerEl.textContent = formatTime(Math.floor(elapsedMs / 1000));
     }
   }, 500);
 }
@@ -516,7 +1025,6 @@ function iniciarTimer(id) {
 // ============================================================
 //  STATS BAR
 // ============================================================
-
 function actualizarStats() {
   let activos = 0, pausados = 0, finalizados = 0;
 
@@ -536,7 +1044,6 @@ function actualizarStats() {
 // ============================================================
 //  CREAR TARJETA
 // ============================================================
-
 function crearTarjeta(pedido) {
   const { id, numero_pedido, sacador, cantidad_referencias, hora_inicio, estatus, auxiliares, tiene_equipo } = pedido;
 
@@ -588,13 +1095,11 @@ function crearTarjeta(pedido) {
   const taskList = document.getElementById("task-list");
   taskList.appendChild(task);
 
-  // Actualizar styling del botón de pausa si está pausado
   if (estatus === "Pausado") {
     const btn = task.querySelector(".btn-pause");
     if (btn) btn.classList.add("paused");
   }
 
-  // Agregar sección de equipo si aplica
   if ((tiene_equipo || auxiliares?.length > 0) && estatus !== "Finalizado") {
     _actualizarSeccionEquipo(id);
   } else if (estatus !== "Finalizado") {
@@ -618,7 +1123,6 @@ function _agregarBtnAuxSuelto(id) {
 // ============================================================
 //  MODAL EQUIPO (para nuevos pedidos)
 // ============================================================
-
 function cerrarModalEquipo() {
   document.getElementById("modal-equipo-overlay").classList.remove("open");
 }
@@ -626,7 +1130,6 @@ function cerrarModalEquipo() {
 // ============================================================
 //  MODAL AUXILIAR
 // ============================================================
-
 let _auxTargetId = null;
 
 function abrirModalAux(id) {
@@ -637,14 +1140,6 @@ function abrirModalAux(id) {
   document.getElementById("aux-subtitle").textContent =
     `Pedido #${data.numero_pedido} — ${data.sacador}`;
 
-  const TODOS = [
-    "Omar Marmolejos Fajardo", "Jairo Fernandez Salcedo", "Ismael Augusto Veras Lasuse",
-    "Fernando Antonio Burgos Cabrera", "Juan De Jesús Peña Pérez", "Luis David Nuñez Santos",
-    "Yustin Alexander Mendez", "Luis Eduardo Reyes", "Omelbe Gomez Valdez",
-    "Bryhan Santo Cordero", "Enrique Nuñez Brito", "Cirilo Reynoso Acevedo",
-    "Yan Carlos Cruz Paulino", "Wilkin Ortega Diaz", "Oscar De Jesús De La Cruz Reinoso"
-  ];
-
   const yaAsignados = [
     data.sacador,
     ...(data.auxiliares || []).map(a => typeof a === "string" ? a : a.nombre)
@@ -652,7 +1147,7 @@ function abrirModalAux(id) {
 
   const auxSelect = document.getElementById("aux-select");
   auxSelect.innerHTML = '<option value="">-- Selecciona un colaborador --</option>';
-  TODOS
+  TODOS_LOS_SACADORES
     .filter(s => !yaAsignados.includes(s))
     .forEach(s => {
       const opt = document.createElement("option");
@@ -757,7 +1252,6 @@ function _actualizarSeccionEquipo(id) {
 // ============================================================
 //  MODAL FINALIZAR
 // ============================================================
-
 let modalId = null;
 let modalStep = 1;
 let modalRespuestas = {};
@@ -822,9 +1316,12 @@ function renderModalStep(step) {
       }
     });
   } else {
+    const now = Date.now();
+    const elapsedMs = calcularElapsedMs(data, now);
+    const elapsedSeg = Math.floor(elapsedMs / 1000);
     const cantSacada = modalRespuestas.cantidad;
     const porcentaje = Math.round((cantSacada / data.cantidad_referencias) * 100);
-    const tpp = cantSacada > 0 ? formatTime(Math.floor(data.elapsedMs / cantSacada / 1000)) : "—";
+    const tpp = cantSacada > 0 ? formatTime(Math.floor(elapsedSeg / cantSacada)) : "—";
 
     const equipoRow = data.tiene_equipo && data.auxiliares && data.auxiliares.length > 0
       ? `<div class="summary-row">
@@ -840,7 +1337,7 @@ function renderModalStep(step) {
         <div class="summary-row"><span class="summary-key">Sacador</span><span class="summary-val">${data.sacador.split(" ").slice(0, 2).join(" ")}</span></div>
         ${equipoRow}
         <div class="summary-row"><span class="summary-key">Productos sacados</span><span class="summary-val">${cantSacada} / ${data.cantidad_referencias} (${porcentaje}%)</span></div>
-        <div class="summary-row"><span class="summary-key">Tiempo total</span><span class="summary-val success">${formatTime(Math.floor(data.elapsedMs / 1000))}</span></div>
+        <div class="summary-row"><span class="summary-key">Tiempo laborable</span><span class="summary-val success">${formatTime(elapsedSeg)}</span></div>
         <div class="summary-row"><span class="summary-key">Tiempo/producto</span><span class="summary-val success">${tpp}</span></div>
         <div class="summary-row"><span class="summary-key">Bultos</span><span class="summary-val">${modalRespuestas.bultos}</span></div>
         <div class="summary-row"><span class="summary-key">Monto total</span><span class="summary-val">RD$ ${parseFloat(modalRespuestas.monto).toFixed(2)}</span></div>
@@ -893,6 +1390,10 @@ function modalSiguiente() {
   }
   modalStep++;
   renderModalStep(modalStep);
+  setTimeout(() => {
+    const ni = document.getElementById("modal-input");
+    if (ni) ni.focus();
+  }, 80);
 }
 
 function modalAnterior() {
@@ -910,57 +1411,74 @@ async function confirmarFinalizar() {
   const data = pedidosActivos[modalId];
   if (!data) return;
 
-  // 🔧 FIX: guardamos el id ANTES de cerrar el modal, porque cerrarModal()
-  // pone modalId = null y de lo contrario el PATCH se dispara con id "null".
+  // Guardamos el id ANTES de cerrar el modal (cerrarModal pone modalId = null)
   const idPedido = modalId;
 
   cerrarModal();
 
   try {
-    const ahora = new Date().toISOString();
+    const ahoraDate = new Date();
+    const ahora = ahoraDate.toISOString();
     const cantidadSacada = modalRespuestas.cantidad;
     const bultos = modalRespuestas.bultos;
     const montoTotal = parseFloat(modalRespuestas.monto);
 
-    // Preparar participantes (líder + auxiliares)
+    // Cerrar el segmento abierto (si no estaba pausado)
+    if (!data.paused) {
+      const ultimo = data.segmentos[data.segmentos.length - 1];
+      if (ultimo && ultimo.fin === null) ultimo.fin = ahora;
+    }
+
+    // Tiempo laborable real del líder, ya calculado a partir de los segmentos
+    const elapsedMs = calcularElapsedMs(data, ahoraDate.getTime());
+    const elapsedSeg = Math.floor(elapsedMs / 1000);
+    const tiempoPorProductoSeg = cantidadSacada > 0 ? (elapsedSeg / cantidadSacada) : 0;
+
     const participantes = [
       {
         sacador: data.sacador,
         rol: "Lider",
         hora_inicio: data.hora_inicio,
         hora_fin: ahora,
-        tiempo_total_segundos: Math.floor(data.elapsedMs / 1000),
-        tiempo_por_producto_segundos: cantidadSacada > 0 ? (data.elapsedMs / 1000 / cantidadSacada) : 0
+        tiempo_total_segundos: elapsedSeg,
+        tiempo_por_producto_segundos: tiempoPorProductoSeg
       }
     ];
 
     if (data.auxiliares && data.auxiliares.length > 0) {
       data.auxiliares.forEach(aux => {
         const nombre = typeof aux === "string" ? aux : aux.nombre;
+        const joinedAt = typeof aux === "object" && aux.joined_at ? aux.joined_at : data.hora_inicio;
+        const tiempoAuxSeg = calcularSegLaborables(nombre, new Date(joinedAt).getTime(), ahoraDate.getTime());
         participantes.push({
           sacador: nombre,
           rol: "Auxiliar",
-          hora_inicio: typeof aux === "object" && aux.joined_at ? aux.joined_at : data.hora_inicio,
+          hora_inicio: joinedAt,
           hora_fin: ahora,
-          tiempo_total_segundos: 0, // El backend calculará esto
-          tiempo_por_producto_segundos: 0
+          tiempo_total_segundos: tiempoAuxSeg,
+          tiempo_por_producto_segundos: cantidadSacada > 0 ? (tiempoAuxSeg / cantidadSacada) : 0
         });
       });
     }
 
-    // Llamar al backend para finalizar
+    // Llamar al backend para finalizar (incluye segmentos + tiempo real calculado)
     const pedidoFinalizado = await GMApi.finalizarPedido(
       idPedido,
       cantidadSacada,
       bultos,
       montoTotal,
       ahora,
-      participantes
+      participantes,
+      data.segmentos,
+      elapsedSeg,
+      tiempoPorProductoSeg
     );
 
     // Actualizar estado local
     data.estatus = "Finalizado";
+    data.elapsedMsFinal = elapsedMs;
     clearInterval(timers[idPedido]);
+    clearInterval(badgeTimers[idPedido]);
 
     // Actualizar UI
     const card = document.getElementById(`card-${idPedido}`);
@@ -970,14 +1488,15 @@ async function confirmarFinalizar() {
     if (endEl) endEl.textContent = formatearFecha(ahora);
 
     const timerEl = document.getElementById(`timer-${idPedido}`);
-    if (timerEl) timerEl.textContent = formatTime(Math.floor(data.elapsedMs / 1000));
+    if (timerEl) timerEl.textContent = formatTime(elapsedSeg);
 
     const tppWrap = document.getElementById(`tpp-wrap-${idPedido}`);
     const tppEl = document.getElementById(`tpp-${idPedido}`);
+    const badgeEl = document.getElementById(`badge-pausa-${idPedido}`);
     if (tppWrap) tppWrap.style.display = "block";
-    if (tppEl) tppEl.textContent = cantidadSacada > 0 ? formatTime(Math.floor(data.elapsedMs / cantidadSacada / 1000)) : "—";
+    if (tppEl) tppEl.textContent = cantidadSacada > 0 ? formatTime(Math.floor(tiempoPorProductoSeg)) : "—";
+    if (badgeEl) badgeEl.style.display = "none";
 
-    // Remover botones de auxiliar
     const teamSection = document.getElementById(`team-section-${idPedido}`);
     if (teamSection) {
       const btn = teamSection.querySelector(".btn-add-aux");
@@ -989,7 +1508,7 @@ async function confirmarFinalizar() {
     actualizarStats();
 
     const porcentaje = Math.round((cantidadSacada / data.cantidad_referencias) * 100);
-    const tppFormato = cantidadSacada > 0 ? formatTime(Math.floor(data.elapsedMs / cantidadSacada / 1000)) : "—";
+    const tppFormato = cantidadSacada > 0 ? formatTime(Math.floor(tiempoPorProductoSeg)) : "—";
     const equipoStr = data.tiene_equipo && data.auxiliares?.length > 0
       ? ` | Equipo: ${data.auxiliares.length + 1} personas` : "";
 
@@ -1006,7 +1525,6 @@ async function confirmarFinalizar() {
 // ============================================================
 //  FILTRO
 // ============================================================
-
 function aplicarFiltro() {
   const textoBusqueda = (document.getElementById("filtro-texto")?.value || "").toLowerCase().trim();
   const sacadorFiltro = (document.getElementById("filtro-sacador")?.value || "").toLowerCase();
@@ -1041,75 +1559,8 @@ function limpiarFiltro() {
 }
 
 // ============================================================
-//  PAUSAS AUTOMÁTICAS Y HORARIOS
+//  TOAST
 // ============================================================
-
-function programarPausas(id, sacador, now) {
-  // Esto se puede implementar después si es necesario
-  // Por ahora, los timers son simples y el backend maneja la lógica
-}
-
-// ============================================================
-//  FERIADOS
-// ============================================================
-
-function cargarFeriados() {
-  try {
-    return JSON.parse(localStorage.getItem("feriados_no_laborables") || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function esFeriado(fecha) {
-  const key = `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}`;
-  return cargarFeriados().includes(key);
-}
-
-function precargarFeriadosRD() {
-  if (cargarFeriados().length === 0) {
-    const FERIADOS_RD_2025 = [
-      "2025-01-01", "2025-01-06", "2025-01-21", "2025-02-27", "2025-04-14",
-      "2025-04-18", "2025-05-01", "2025-06-19", "2025-08-16", "2025-09-24",
-      "2025-11-06", "2025-12-25"
-    ];
-    const FERIADOS_RD_2026 = [
-      "2026-01-01", "2026-01-06", "2026-01-26", "2026-02-27", "2026-04-03",
-      "2026-04-06", "2026-05-01", "2026-06-29", "2026-08-16", "2026-09-24",
-      "2026-11-06", "2026-12-25"
-    ];
-    localStorage.setItem("feriados_no_laborables", JSON.stringify([...FERIADOS_RD_2025, ...FERIADOS_RD_2026]));
-    console.log("✅ Feriados dominicanos precargados.");
-  }
-}
-
-// ============================================================
-//  UTILIDADES
-// ============================================================
-
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
-
-function formatTime(totalSeconds) {
-  totalSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
-}
-
-function formatearFecha(timestamp) {
-  let d;
-  if (typeof timestamp === "string") {
-    d = new Date(timestamp);
-  } else {
-    d = new Date(timestamp);
-  }
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ` +
-    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
 function mostrarToast(msg, tipo = "info") {
   let container = document.getElementById("toast-container");
   if (!container) {
@@ -1131,9 +1582,7 @@ function mostrarToast(msg, tipo = "info") {
 // ============================================================
 //  INICIALIZACIÓN
 // ============================================================
-
 // El DOMContentLoaded está en el HTML y llama a inicializarAutenticacion()
 // que a su vez llama a cargarPedidosDelBackend()
 
-// Precarga de feriados
 precargarFeriadosRD();
