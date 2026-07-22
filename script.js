@@ -156,89 +156,93 @@ function eliminarFeriado(fecha) {
 }
 
 // ============================================================
-//  HORARIOS LABORABLES
+//  HORARIOS LABORABLES — ahora vienen de la tabla `sacadores`
+//  en Supabase (gestionados desde Sacadores.html), no de objetos
+//  quemados en el código. Se cargan una vez por sesión en
+//  cargarSacadores() y se guardan en SACADORES_CACHE.
 // ============================================================
-const HORA_ENTRADA = "08:00:00";
+const HORA_ENTRADA_DEFAULT = "08:00:00";
 
-const HORARIO_SALIDA_PERSONAL = {
-  "Elvin Manuel Villar Holguin":       { lun_jue: "18:00:00", vie: "17:00:00", sab: null },
-  "Fernando Robles Grullon":           { lun_jue: "17:00:00", vie: "17:00:00", sab: null },
-  "Clara Elvira Fanith Perez":         { lun_jue: "18:00:00", vie: "17:00:00", sab: null },
-  "Omar Marmolejos Fajardo":           { lun_jue: "17:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Jairo Fernandez Salcedo":           { lun_jue: "17:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Juan De Jesús Peña Pérez":          { lun_jue: "17:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Luis David Nuñez Santos":           { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Cirilo Reynoso Acevedo":            { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Enrique Nuñez Brito":               { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Luis Eduardo Reyes":                { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Bryhan Santo Cordero":              { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Wilkin Ortega Diaz":                { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Yan Carlos Cruz Paulino":           { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Fernando Antonio Burgos Cabrera":   { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Omelbe Gomez Valdez":               { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Ismael Augusto Veras Lasuse":       { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" },
-  "Anyelo Morel Acosta":               { lun_jue: "18:00:00", vie: "17:00:00", sab: null },
-  "Oscar De Jesús De La Cruz Reinoso": { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" }
-};
+// { "Nombre Sacador": { activo, horario_entrada, salida_lun_jue, salida_viernes,
+//                       salida_sabado, almuerzo_inicio, almuerzo_fin, breaks:[{hora,duracion_min}] } }
+let SACADORES_CACHE = {};
 
-const HORARIO_SALIDA_DEFAULT = { lun_jue: "18:00:00", vie: "17:00:00", sab: "12:00:00" };
+// Nombres de sacadores ACTIVOS — reemplaza a la lista quemada de antes.
+// La llenan dinámicamente cargarSacadores() y poblarSelectsSacadores().
+let TODOS_LOS_SACADORES = [];
+
+/**
+ * Trae los sacadores desde el backend (tabla `sacadores` en Supabase)
+ * y llena SACADORES_CACHE + TODOS_LOS_SACADORES + los <select> del DOM.
+ * Debe llamarse ANTES de renderizar/pausar pedidos, porque el motor
+ * de tiempo laborable depende de estos datos.
+ */
+async function cargarSacadores() {
+  try {
+    const lista = await GMApi.obtenerSacadores(); // trae todos (activos e inactivos)
+    SACADORES_CACHE = {};
+    TODOS_LOS_SACADORES = [];
+
+    for (const s of lista) {
+      SACADORES_CACHE[s.nombre] = s;
+      if (s.activo) TODOS_LOS_SACADORES.push(s.nombre);
+    }
+    TODOS_LOS_SACADORES.sort((a, b) => a.localeCompare(b, "es"));
+
+    poblarSelectsSacadores();
+  } catch (err) {
+    console.error("❌ Error cargando sacadores:", err.message);
+    mostrarToast("⚠️ No se pudieron cargar los sacadores.", "error");
+  }
+}
+
+/**
+ * Llena los <select> de sacador en la página de Pedidos con la
+ * lista de sacadores activos que vino del backend.
+ */
+function poblarSelectsSacadores() {
+  const selectPedido = document.getElementById("sacador");
+  if (selectPedido) {
+    const actual = selectPedido.value;
+    selectPedido.innerHTML = '<option value="">Selecciona el sacador</option>' +
+      TODOS_LOS_SACADORES.map(n => `<option value="${n}">${n}</option>`).join("");
+    if (TODOS_LOS_SACADORES.includes(actual)) selectPedido.value = actual;
+  }
+
+  const selectFiltro = document.getElementById("filtro-sacador");
+  if (selectFiltro) {
+    const actual = selectFiltro.value;
+    selectFiltro.innerHTML = '<option value="">Todos los sacadores</option>' +
+      TODOS_LOS_SACADORES.map(n => `<option value="${n.toLowerCase()}">${n}</option>`).join("");
+    selectFiltro.value = actual;
+  }
+}
 
 function getSalidaPersonal(sacador, dia) {
-  const h = HORARIO_SALIDA_PERSONAL[sacador] || HORARIO_SALIDA_DEFAULT;
-  if (dia >= 1 && dia <= 4) return h.lun_jue;
-  if (dia === 5) return h.vie;
-  if (dia === 6) return h.sab;
+  const s = SACADORES_CACHE[sacador];
+  if (dia >= 1 && dia <= 4) return s ? s.salida_lun_jue : "18:00:00";
+  if (dia === 5) return s ? s.salida_viernes : "17:00:00";
+  if (dia === 6) return s ? s.salida_sabado : "12:00:00";
   return null;
 }
 
-// ── Breaks de 10 minutos ─────────────────────────────────────
-const BREAKS_10MIN = {
-  "Omar Marmolejos Fajardo":         [{ hora: "10:00:00", durMin: 10 }, { hora: "12:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Jairo Fernandez Salcedo":         [{ hora: "10:00:00", durMin: 10 }, { hora: "12:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Juan De Jesús Peña Pérez":        [{ hora: "10:00:00", durMin: 10 }, { hora: "12:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Luis David Nuñez Santos":         [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Cirilo Reynoso Acevedo":          [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Enrique Nuñez Brito":             [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Luis Eduardo Reyes":              [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Bryhan Santo Cordero":            [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Wilkin Ortega Diaz":              [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Yan Carlos Cruz Paulino":         [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Fernando Antonio Burgos Cabrera": [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Omelbe Gomez Valdez":             [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }],
-  "Oscar De Jesús De La Cruz Reinoso": [{ hora: "10:00:00", durMin: 10 }, { hora: "16:00:00", durMin: 10 }]
-};
+function getHoraEntrada(sacador) {
+  const s = SACADORES_CACHE[sacador];
+  return (s && s.horario_entrada) || HORA_ENTRADA_DEFAULT;
+}
 
-// ── Almuerzo individual ───────────────────────────────────────
-const INDIVIDUAL_PAUSES = {
-  "Elvin Manuel Villar Holguin":       { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Fernando Robles Grullon":           { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Clara Elvira Fanith Perez":         { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Omar Marmolejos Fajardo":           { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Jairo Fernandez Salcedo":           { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Ismael Augusto Veras Lasuse":       { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Fernando Antonio Burgos Cabrera":   { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Juan De Jesús Peña Pérez":          { pausa: "13:00:00", reanuda: "14:00:00" },
-  "Luis David Nuñez Santos":           { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Yustin Alexander Mendez":           { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Luis Eduardo Reyes":                { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Omelbe Gomez Valdez":               { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Bryhan Santo Cordero":              { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Enrique Nuñez Brito":               { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Cirilo Reynoso Acevedo":            { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Yan Carlos Cruz Paulino":           { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Wilkin Ortega Diaz":                { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Anyelo Morel Acosta":               { pausa: "12:00:00", reanuda: "14:00:00" },
-  "Oscar De Jesús De La Cruz Reinoso": { pausa: "12:00:00", reanuda: "14:00:00" }
-};
+function getBreaksSacador(sacador) {
+  const s = SACADORES_CACHE[sacador];
+  if (!s || !Array.isArray(s.breaks)) return [];
+  // Normaliza duracion_min (Supabase) -> durMin (usado en el resto del motor)
+  return s.breaks.map(b => ({ hora: b.hora, durMin: b.duracion_min }));
+}
 
-// Lista de sacadores usada en los selects de auxiliar/equipo
-const TODOS_LOS_SACADORES = [
-  "Omar Marmolejos Fajardo", "Jairo Fernandez Salcedo", "Ismael Augusto Veras Lasuse",
-  "Fernando Antonio Burgos Cabrera", "Juan De Jesús Peña Pérez", "Luis David Nuñez Santos",
-  "Yustin Alexander Mendez", "Luis Eduardo Reyes", "Omelbe Gomez Valdez",
-  "Bryhan Santo Cordero", "Enrique Nuñez Brito", "Cirilo Reynoso Acevedo",
-  "Yan Carlos Cruz Paulino", "Wilkin Ortega Diaz", "Oscar De Jesús De La Cruz Reinoso"
-];
+function getAlmuerzoSacador(sacador) {
+  const s = SACADORES_CACHE[sacador];
+  if (!s || !s.almuerzo_inicio || !s.almuerzo_fin) return null;
+  return { pausa: s.almuerzo_inicio, reanuda: s.almuerzo_fin };
+}
 
 // ============================================================
 //  MOTOR DE TIEMPO LABORABLE
@@ -263,20 +267,22 @@ function getRangosLaboralesDia(fecha, sacador) {
   const salidaStr = getSalidaPersonal(sacador, dia);
   if (!salidaStr) return [];
 
-  const entrada = hhmmssASeg(HORA_ENTRADA);
+  const entrada = hhmmssASeg(getHoraEntrada(sacador));
   const salida = hhmmssASeg(salidaStr);
 
   const pausas = [];
 
-  if (dia !== 6 && INDIVIDUAL_PAUSES[sacador]) {
+  const almuerzo = getAlmuerzoSacador(sacador);
+  if (dia !== 6 && almuerzo) {
     pausas.push({
-      inicio: hhmmssASeg(INDIVIDUAL_PAUSES[sacador].pausa),
-      fin: hhmmssASeg(INDIVIDUAL_PAUSES[sacador].reanuda)
+      inicio: hhmmssASeg(almuerzo.pausa),
+      fin: hhmmssASeg(almuerzo.reanuda)
     });
   }
 
-  if (dia >= 1 && dia <= 4 && BREAKS_10MIN[sacador]) {
-    for (const b of BREAKS_10MIN[sacador]) {
+  const breaksSacador = getBreaksSacador(sacador);
+  if (dia >= 1 && dia <= 4 && breaksSacador.length > 0) {
+    for (const b of breaksSacador) {
       const ini = hhmmssASeg(b.hora);
       const fin = ini + b.durMin * 60;
       if (ini >= entrada && fin <= salida) {
@@ -418,6 +424,7 @@ async function inicializarAutenticacion() {
     document.getElementById("btn-float-extras").style.display = "flex";
     document.getElementById("usuario-nombre").textContent = usuario.nombre || "Usuario";
 
+    await cargarSacadores();
     cargarPedidosDelBackend();
   } catch (err) {
     console.error("❌ Error verificando sesión:", err);
@@ -455,6 +462,7 @@ async function autenticar() {
     document.getElementById("btn-float-extras").style.display = "flex";
     document.getElementById("usuario-nombre").textContent = usuario.nombre || "Usuario";
 
+    await cargarSacadores();
     cargarPedidosDelBackend();
     mostrarToast(`¡Bienvenido, ${usuario.nombre}! 👋`, "success");
   } catch (err) {
@@ -859,15 +867,17 @@ function diasHastaProximoLaborable(desde) {
 function programarPausas(id, sacador, now) {
   const dia = now.getDay();
 
-  if (dia !== 6 && INDIVIDUAL_PAUSES[sacador]) {
-    const p1 = getFutureTime(now, INDIVIDUAL_PAUSES[sacador].pausa);
-    const r1 = getFutureTime(now, INDIVIDUAL_PAUSES[sacador].reanuda);
+  const almuerzo = getAlmuerzoSacador(sacador);
+  if (dia !== 6 && almuerzo) {
+    const p1 = getFutureTime(now, almuerzo.pausa);
+    const r1 = getFutureTime(now, almuerzo.reanuda);
     if (p1 > now) setTimeout(() => pausar(id, "almuerzo"), p1 - now);
     if (r1 > now) setTimeout(() => reanudar(id), r1 - now);
   }
 
-  if (dia >= 1 && dia <= 4 && BREAKS_10MIN[sacador]) {
-    for (const b of BREAKS_10MIN[sacador]) {
+  const breaksSacador = getBreaksSacador(sacador);
+  if (dia >= 1 && dia <= 4 && breaksSacador.length > 0) {
+    for (const b of breaksSacador) {
       const pBreak = getFutureTime(now, b.hora);
       const rBreak = new Date(pBreak.getTime() + b.durMin * 60 * 1000);
       if (pBreak > now) setTimeout(() => pausar(id, "break"), pBreak - now);
@@ -879,7 +889,7 @@ function programarPausas(id, sacador, now) {
   if (salidaStr) {
     const pausaSalida = getFutureTime(now, salidaStr);
     const diasHasta = diasHastaProximoLaborable(now);
-    const reanuda = getFutureTime(addDays(now, diasHasta), HORA_ENTRADA);
+    const reanuda = getFutureTime(addDays(now, diasHasta), getHoraEntrada(sacador));
     if (pausaSalida > now) setTimeout(() => pausar(id, "salida"), pausaSalida - now);
     if (reanuda > now) setTimeout(() => reanudar(id), reanuda - now);
   }
@@ -892,13 +902,15 @@ function calcularProximaPausa(sacador, now) {
   const eventos = [];
   const dia = now.getDay();
 
-  if (dia !== 6 && INDIVIDUAL_PAUSES[sacador]) {
-    const p = getFutureTime(now, INDIVIDUAL_PAUSES[sacador].pausa);
+  const almuerzo = getAlmuerzoSacador(sacador);
+  if (dia !== 6 && almuerzo) {
+    const p = getFutureTime(now, almuerzo.pausa);
     if (p > now) eventos.push({ label: "🍽 Almuerzo", time: p, tipo: "almuerzo" });
   }
 
-  if (dia >= 1 && dia <= 4 && BREAKS_10MIN[sacador]) {
-    for (const b of BREAKS_10MIN[sacador]) {
+  const breaksSacador = getBreaksSacador(sacador);
+  if (dia >= 1 && dia <= 4 && breaksSacador.length > 0) {
+    for (const b of breaksSacador) {
       const p = getFutureTime(now, b.hora);
       if (p > now) eventos.push({ label: `☕ Break ${b.durMin}min`, time: p, tipo: "break" });
     }
