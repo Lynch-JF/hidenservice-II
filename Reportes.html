@@ -10,27 +10,224 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     :root {
-      --rep-bg: #F2F4F8;
-      --rep-card: #FFFFFF;
-      --rep-primary: #2F4858;
-      --rep-primary-light: #4A6E8A;
-      --rep-accent: #F2845C;
-      --rep-accent-2: #4FA3D1;
-      --rep-accent-green: #27AE60;
-      --rep-accent-max: #E84393;
+      /* ── Paleta dark Sujumi ───────────────────────────── */
+      --rep-bg:          #0A0E14;
+      --rep-sidebar:     #0D1219;
+      --rep-card:        #131A24;
+      --rep-card-hover:  #171F2C;
+      --rep-border:      #202836;
+      --rep-border-soft: #1A222E;
+
+      --rep-text:        #E7ECF3;
+      --rep-text-light:  #8B96A8;
+      --rep-text-dim:    #5C6779;
+
+      --rep-primary:       #22C55E;
+      --rep-primary-dark:  #16A34A;
+      --rep-primary-soft:  rgba(34,197,94,0.12);
+
+      --rep-accent:      #F2845C;
+      --rep-accent-2:    #4FA3D1;
+      --rep-accent-green:#27AE60;
+      --rep-accent-max:  #E84393;
       --rep-accent-team: #8B5CF6;
-      --rep-text: #1F2937;
-      --rep-text-light: #8A94A6;
-      --rep-border: #E6EAF0;
+      --rep-accent-blue: #3B82F6;
+      --rep-accent-purple:#A78BFA;
+
       --rep-radius: 14px;
+      --rep-radius-sm: 10px;
     }
 
-    .dashboard-reportes {
-      max-width: 1200px;
-      margin: 30px auto;
-      padding: 0 20px 40px;
+    * { box-sizing: border-box; }
+
+    html, body {
+      background: var(--rep-bg);
+      margin: 0;
+    }
+
+    body {
       font-family: 'Segoe UI', Arial, sans-serif;
       color: var(--rep-text);
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* ── Shell general ────────────────────────────────── */
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+      background: var(--rep-bg);
+    }
+
+    /* ── Sidebar ──────────────────────────────────────── */
+    .app-sidebar {
+      width: 236px;
+      flex-shrink: 0;
+      background: var(--rep-sidebar);
+      border-right: 1px solid var(--rep-border-soft);
+      display: flex;
+      flex-direction: column;
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 22px;
+    }
+    .sidebar-logo .logo-mark {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #F2845C, #E84393 45%, #4FA3D1 75%, var(--rep-primary));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #fff; font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    .sidebar-logo .logo-text { line-height: 1.1; }
+    .sidebar-logo .logo-text strong { display: block; font-size: 1.02rem; font-weight: 800; letter-spacing: 0.2px; }
+    .sidebar-logo .logo-text span { font-size: 0.62rem; color: var(--rep-text-dim); font-weight: 700; letter-spacing: 1.2px; }
+
+    .sidebar-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: var(--rep-text-dim);
+      text-transform: uppercase;
+      margin: 18px 10px 8px;
+    }
+
+    .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 12px;
+      border-radius: var(--rep-radius-sm);
+      color: var(--rep-text-light);
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .sidebar-nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-nav a:hover { background: var(--rep-card-hover); color: var(--rep-text); }
+    .sidebar-nav a.activo {
+      background: var(--rep-primary-soft);
+      color: var(--rep-primary);
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    .sidebar-info-box {
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-left: 3px solid var(--rep-primary);
+      border-radius: var(--rep-radius-sm);
+      padding: 14px;
+      margin-top: 10px;
+    }
+    .sidebar-info-box h4 {
+      margin: 0 0 5px;
+      font-size: 0.82rem;
+      color: var(--rep-primary);
+      font-weight: 800;
+    }
+    .sidebar-info-box p {
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--rep-text-light);
+      line-height: 1.4;
+    }
+    .sidebar-info-divider {
+      height: 1px;
+      background: var(--rep-border);
+      margin: 12px 0 10px;
+    }
+    .sidebar-clock {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-clock svg { width: 15px; height: 15px; color: var(--rep-text-dim); flex-shrink: 0; }
+    .sidebar-clock-text { line-height: 1.25; }
+    #sidebar-fecha { display: block; font-size: 0.72rem; color: var(--rep-text-dim); font-weight: 600; }
+    #sidebar-hora  { display: block; font-size: 1.02rem; color: var(--rep-text); font-weight: 800; }
+
+    /* ── Contenido principal ──────────────────────────── */
+    .app-content { flex: 1; min-width: 0; }
+
+    .app-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 34px;
+      border-bottom: 1px solid var(--rep-border-soft);
+      flex-wrap: wrap;
+    }
+    .app-topbar-title h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--rep-text);
+    }
+    .app-topbar-title p {
+      margin: 3px 0 0;
+      font-size: 0.85rem;
+      color: var(--rep-text-light);
+    }
+
+    .app-topbar-nav {
+      display: flex;
+      gap: 8px;
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      padding: 4px;
+      border-radius: 999px;
+    }
+    .app-topbar-nav a {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--rep-text-light);
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .app-topbar-nav a svg { width: 15px; height: 15px; }
+    .app-topbar-nav a:hover { color: var(--rep-text); }
+    .app-topbar-nav a.activo {
+      background: var(--rep-primary-soft);
+      color: var(--rep-primary);
+    }
+
+    .app-topbar-user {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-radius: 999px;
+      padding: 6px 14px 6px 6px;
+    }
+    .app-topbar-user .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--rep-primary-soft);
+      color: var(--rep-primary);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem;
+    }
+    .app-topbar-user .user-meta { line-height: 1.2; }
+    .app-topbar-user .user-meta strong { display: block; font-size: 0.84rem; font-weight: 700; }
+    .app-topbar-user .user-meta span { font-size: 0.72rem; color: var(--rep-text-light); }
+    .app-topbar-user svg { width: 14px; height: 14px; color: var(--rep-text-dim); margin-left: 2px; }
+
+    /* ── Dashboard reportes ───────────────────────────── */
+    .dashboard-reportes {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 34px 50px;
     }
 
     .rep-header {
@@ -38,15 +235,18 @@
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 18px;
+      gap: 12px;
+      margin-bottom: 20px;
     }
     .rep-header h2 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--rep-primary);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--rep-text);
       margin: 0;
     }
+    .rep-header h2 svg { width: 22px; height: 22px; color: var(--rep-primary); }
+
     .rep-header-controls {
       display: flex;
       align-items: center;
@@ -57,11 +257,11 @@
     #refresh-badge {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       background: var(--rep-card);
       border: 1px solid var(--rep-border);
       border-radius: 999px;
-      padding: 6px 14px;
+      padding: 7px 15px;
       font-size: 0.82rem;
       color: var(--rep-text-light);
       font-weight: 600;
@@ -70,7 +270,7 @@
     #refresh-badge .dot {
       width: 8px; height: 8px;
       border-radius: 50%;
-      background: var(--rep-accent-green);
+      background: var(--rep-primary);
       animation: pulse 2s infinite;
     }
     @keyframes pulse {
@@ -81,124 +281,172 @@
     #btn-exportar {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       background: var(--rep-primary);
-      color: #fff;
+      color: #06210F;
       border: none;
       border-radius: 999px;
-      padding: 8px 18px;
-      font-size: 0.88rem;
-      font-weight: 700;
+      padding: 9px 20px;
+      font-size: 0.86rem;
+      font-weight: 800;
       cursor: pointer;
       transition: background 0.15s ease, transform 0.1s ease;
     }
-    #btn-exportar:hover { background: var(--rep-primary-light); transform: translateY(-1px); }
+    #btn-exportar svg { width: 15px; height: 15px; }
+    #btn-exportar:hover { background: #34D670; transform: translateY(-1px); }
 
     .rep-filtros-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 22px;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 24px;
     }
     .rep-filtros {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      padding: 5px;
+      border-radius: 999px;
     }
     .rep-filtros button {
-      border: 1px solid var(--rep-border);
-      background: var(--rep-card);
+      border: none;
+      background: transparent;
       color: var(--rep-text-light);
-      padding: 8px 18px;
+      padding: 8px 17px;
       border-radius: 999px;
-      font-size: 0.9rem;
-      font-weight: 600;
+      font-size: 0.86rem;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.15s ease;
     }
-    .rep-filtros button:hover { border-color: var(--rep-primary-light); color: var(--rep-primary); }
+    .rep-filtros button:hover { color: var(--rep-text); }
     .rep-filtros button.activo {
       background: var(--rep-primary);
-      border-color: var(--rep-primary);
-      color: #fff;
-      box-shadow: 0 4px 10px rgba(47,72,88,0.25);
+      color: #06210F;
     }
 
     #sel-auxiliar {
       border: 1px solid var(--rep-border);
       background: var(--rep-card);
       color: var(--rep-text);
-      padding: 8px 14px;
+      padding: 9px 16px;
       border-radius: 999px;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
       outline: none;
       transition: border-color 0.15s;
     }
-    #sel-auxiliar:focus { border-color: var(--rep-primary-light); }
+    #sel-auxiliar:focus { border-color: var(--rep-primary); }
 
+    /* ── KPIs ─────────────────────────────────────────── */
     .rep-kpis {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 16px;
-      margin-bottom: 22px;
+      margin-bottom: 24px;
     }
     .rep-kpi {
       background: var(--rep-card);
       border-radius: var(--rep-radius);
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 2px 10px rgba(31,41,55,0.05);
+      padding: 18px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
       border: 1px solid var(--rep-border);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      position: relative;
+      overflow: hidden;
     }
-    .rep-kpi:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(31,41,55,0.08); }
-    .rep-kpi .valor { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
-    .rep-kpi .etiqueta { margin-top: 6px; font-size: 0.82rem; color: var(--rep-text-light); font-weight: 600; letter-spacing: 0.3px; }
-    .rep-kpi.kpi-azul .valor    { color: var(--rep-accent-2); }
-    .rep-kpi.kpi-naranja .valor { color: var(--rep-accent); }
-    .rep-kpi.kpi-verde .valor   { color: var(--rep-accent-green); }
+    .rep-kpi:hover { transform: translateY(-3px); border-color: var(--rep-border-soft); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+
+    .rep-kpi .kpi-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .rep-kpi .kpi-icon svg { width: 20px; height: 20px; }
+
+    .rep-kpi .valor { font-size: 1.75rem; font-weight: 800; line-height: 1.1; color: var(--rep-text); }
+    .rep-kpi .etiqueta { margin-top: 5px; font-size: 0.8rem; color: var(--rep-text); font-weight: 700; }
+    .rep-kpi .subtexto { margin-top: 2px; font-size: 0.74rem; color: var(--rep-text-dim); }
+
+    .rep-kpi.kpi-verde   .kpi-icon { background: rgba(34,197,94,0.14);  color: var(--rep-primary); }
+    .rep-kpi.kpi-azul    .kpi-icon { background: rgba(59,130,246,0.14); color: var(--rep-accent-blue); }
+    .rep-kpi.kpi-naranja .kpi-icon { background: rgba(242,132,92,0.14); color: var(--rep-accent); }
+    .rep-kpi.kpi-morado  .kpi-icon { background: rgba(167,139,250,0.14);color: var(--rep-accent-purple); }
+
+    .rep-kpi-bar { height: 4px; border-radius: 999px; background: var(--rep-border); margin-top: 14px; overflow: hidden; }
+    .rep-kpi-bar span { display: block; height: 100%; width: 62%; border-radius: 999px; }
+    .rep-kpi.kpi-verde   .rep-kpi-bar span { background: var(--rep-primary); }
+    .rep-kpi.kpi-azul    .rep-kpi-bar span { background: var(--rep-accent-blue); }
+    .rep-kpi.kpi-naranja .rep-kpi-bar span { background: var(--rep-accent); }
+    .rep-kpi.kpi-morado  .rep-kpi-bar span { background: var(--rep-accent-purple); }
 
     .kpi-tendencia {
       display: inline-flex;
       align-items: center;
       gap: 3px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      margin-top: 5px;
+      margin-top: 6px;
       padding: 2px 8px;
       border-radius: 999px;
     }
-    .kpi-tendencia.sube  { background: #DCFCE7; color: #166534; }
-    .kpi-tendencia.baja  { background: #FEE2E2; color: #991B1B; }
-    .kpi-tendencia.igual { background: #F3F4F6; color: #6B7280; }
+    .kpi-tendencia.sube  { background: rgba(34,197,94,0.14);  color: #4ADE80; }
+    .kpi-tendencia.baja  { background: rgba(239,68,68,0.14);  color: #F87171; }
+    .kpi-tendencia.igual { background: rgba(148,163,184,0.14);color: var(--rep-text-light); }
 
+    /* ── Cards / gráficas ─────────────────────────────── */
     .rep-card {
       background: var(--rep-card);
       border-radius: var(--rep-radius);
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(31,41,55,0.05);
+      padding: 22px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
       border: 1px solid var(--rep-border);
       margin-bottom: 22px;
     }
-    .rep-card h3 { margin: 0 0 6px; font-size: 1.1rem; color: var(--rep-primary); font-weight: 700; }
+    .rep-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .rep-card h3 { margin: 0; font-size: 1.02rem; color: var(--rep-text); font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .rep-card h3 svg { width: 17px; height: 17px; color: var(--rep-text-light); }
+
+    .rep-ver-por {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--rep-bg);
+      border: 1px solid var(--rep-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--rep-text-light);
+      white-space: nowrap;
+    }
+    .rep-ver-por strong { color: var(--rep-text); }
+    .rep-ver-por svg { width: 13px; height: 13px; }
 
     .rep-card-subtitulo {
       font-size: 0.78rem;
       color: var(--rep-text-light);
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
-    .rep-card-subtitulo .dot-ind  { width: 9px; height: 9px; border-radius: 50%; background: var(--rep-accent); display: inline-block; }
+    .rep-card-subtitulo .dot-ind  { width: 9px; height: 9px; border-radius: 50%; background: var(--rep-primary); display: inline-block; }
     .rep-card-subtitulo .dot-team { width: 9px; height: 9px; border-radius: 50%; background: var(--rep-accent-team); display: inline-block; }
     .rep-card-subtitulo .dot-blue { width: 9px; height: 9px; border-radius: 50%; background: var(--rep-accent-2); display: inline-block; }
 
-    .rep-grafica-wrapper { position: relative; height: 360px; }
+    .rep-grafica-wrapper { position: relative; height: 300px; }
     .rep-grafica-wrapper.compacta { height: 240px; }
 
     .graficas-grid {
@@ -215,11 +463,7 @@
       margin-bottom: 22px;
     }
 
-    .grafica-full {
-      margin-bottom: 22px;
-    }
-
-    @media (max-width: 860px) {
+    @media (max-width: 980px) {
       .graficas-grid { grid-template-columns: 1fr; }
       .graficas-tiempo-grid { grid-template-columns: 1fr; }
     }
@@ -228,12 +472,12 @@
       display: none;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
-      font-size: 0.82rem;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
       font-weight: 700;
       color: var(--rep-accent);
-      background: #FFF4F0;
-      border: 1px solid #FECDB5;
+      background: rgba(242,132,92,0.1);
+      border: 1px solid rgba(242,132,92,0.35);
       border-radius: 999px;
       padding: 4px 12px;
       width: fit-content;
@@ -244,45 +488,89 @@
       font-size: 0.9rem; color: var(--rep-accent);
       padding: 0; line-height: 1; font-weight: 900;
     }
-    .grafica-filtro-activo button:hover { color: #c0603a; }
+    .grafica-filtro-activo button:hover { color: #ffb08e; }
 
-    .sin-equipos-aviso {
+    /* ── Estados vacíos ilustrados ─────────────────────── */
+    .estado-vacio {
       text-align: center;
-      color: var(--rep-text-light);
-      font-size: 0.88rem;
-      padding: 30px 0;
-      font-style: italic;
+      padding: 30px 10px 8px;
     }
+    .estado-vacio .ilustracion {
+      width: 150px; height: 150px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .estado-vacio .ilustracion svg.principal { width: 70px; height: 70px; }
+    .estado-vacio.tipo-ind .ilustracion { background: radial-gradient(circle, rgba(34,197,94,0.14), rgba(34,197,94,0.02) 70%); }
+    .estado-vacio.tipo-team .ilustracion { background: radial-gradient(circle, rgba(139,92,246,0.16), rgba(139,92,246,0.02) 70%); }
+    .estado-vacio .plusmark {
+      position: absolute; font-weight: 800; color: var(--rep-text-dim); opacity: 0.55; font-size: 0.9rem;
+    }
+    .estado-vacio h4 { margin: 0 0 6px; font-size: 1rem; font-weight: 800; color: var(--rep-text); }
+    .estado-vacio p { margin: 0; font-size: 0.82rem; color: var(--rep-text-light); line-height: 1.45; max-width: 300px; margin: 0 auto; }
 
+    .sin-equipos-aviso { display: none; } /* legado: reemplazado por .estado-vacio */
+
+    /* ── Franja informativa ───────────────────────────── */
+    .rep-info-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+    .rep-info-item {
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius);
+      padding: 18px;
+      display: flex; align-items: flex-start; gap: 13px;
+    }
+    .rep-info-item .icon-wrap {
+      width: 38px; height: 38px; flex-shrink: 0;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rep-info-item .icon-wrap svg { width: 18px; height: 18px; }
+    .rep-info-item:nth-child(1) .icon-wrap { background: rgba(34,197,94,0.14);  color: var(--rep-primary); }
+    .rep-info-item:nth-child(2) .icon-wrap { background: rgba(79,163,209,0.14); color: var(--rep-accent-2); }
+    .rep-info-item:nth-child(3) .icon-wrap { background: rgba(242,132,92,0.14); color: var(--rep-accent); }
+    .rep-info-item h5 { margin: 0 0 3px; font-size: 0.88rem; font-weight: 800; color: var(--rep-text); }
+    .rep-info-item p { margin: 0; font-size: 0.78rem; color: var(--rep-text-light); line-height: 1.4; }
+
+    @media (max-width: 860px) { .rep-info-strip { grid-template-columns: 1fr; } }
+
+    /* ── Tabla ────────────────────────────────────────── */
     .rep-tabla-wrapper { overflow-x: auto; }
-    table.rep-tabla { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 700px; }
+    table.rep-tabla { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 700px; }
     table.rep-tabla thead th {
       text-align: left; padding: 10px 12px; background: var(--rep-bg);
-      color: var(--rep-primary); font-weight: 700; border-bottom: 2px solid var(--rep-border);
-      position: sticky; top: 0;
+      color: var(--rep-text-light); font-weight: 700; border-bottom: 1px solid var(--rep-border);
+      position: sticky; top: 0; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.4px;
     }
-    table.rep-tabla td { padding: 9px 12px; border-bottom: 1px solid var(--rep-border); }
+    table.rep-tabla td { padding: 10px 12px; border-bottom: 1px solid var(--rep-border-soft); color: var(--rep-text); }
     table.rep-tabla td:not(:first-child),
     table.rep-tabla th:not(:first-child) { text-align: right; }
-    table.rep-tabla tbody tr:hover { background: #FAFBFD; }
+    table.rep-tabla tbody tr:hover { background: var(--rep-card-hover); }
     table.rep-tabla tfoot td {
-      font-weight: 800; color: var(--rep-primary);
+      font-weight: 800; color: var(--rep-text);
       border-top: 2px solid var(--rep-primary); border-bottom: none; background: var(--rep-bg);
     }
-    table.rep-tabla tbody tr.fila-equipo td { background: #F5F3FF; }
-    table.rep-tabla tbody tr.fila-equipo:hover td { background: #EDE9FE; }
+    table.rep-tabla tbody tr.fila-equipo td { background: rgba(139,92,246,0.06); }
+    table.rep-tabla tbody tr.fila-equipo:hover td { background: rgba(139,92,246,0.12); }
 
     .badge-equipo {
       display: inline-flex; align-items: center; gap: 3px;
-      background: #EDE9FE; color: #6D28D9; border: 1px solid #C4B5FD;
+      background: rgba(139,92,246,0.16); color: #C4B5FD; border: 1px solid rgba(139,92,246,0.4);
       border-radius: 999px; padding: 2px 8px;
-      font-size: 0.73rem; font-weight: 700; margin-left: 6px; vertical-align: middle;
+      font-size: 0.72rem; font-weight: 700; margin-left: 6px; vertical-align: middle;
     }
 
     .rank-medal { font-size: 1.1rem; margin-right: 4px; }
     .progress-bar-wrap { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
     .progress-bar {
-      height: 8px; border-radius: 999px;
+      height: 7px; border-radius: 999px;
       background: linear-gradient(90deg, var(--rep-accent), var(--rep-accent-2));
       min-width: 4px; transition: width 0.4s ease;
     }
@@ -290,18 +578,18 @@
 
     .tiempo-max-badge {
       display: inline-flex; align-items: center; gap: 4px;
-      background: #FDF2F8; color: #BE185D; border: 1px solid #F9A8D4;
+      background: rgba(232,67,147,0.14); color: #F472B6; border: 1px solid rgba(232,67,147,0.35);
       border-radius: 999px; padding: 2px 8px;
-      font-size: 0.78rem; font-weight: 700; margin-left: 6px;
+      font-size: 0.76rem; font-weight: 700; margin-left: 6px;
     }
-    .tiempo-cell-max { color: #BE185D; font-weight: 800; }
+    .tiempo-cell-max { color: #F472B6; font-weight: 800; }
 
     .rep-cargando, .rep-vacio { text-align: center; color: var(--rep-text-light); padding: 30px 0; }
-    .monto-cell { color: var(--rep-accent-green); font-weight: 700; }
+    .monto-cell { color: #4ADE80; font-weight: 700; }
 
     .grafica-hint {
-      text-align: center; font-size: 0.75rem;
-      color: var(--rep-text-light); margin-top: 8px; font-style: italic;
+      text-align: center; font-size: 0.74rem;
+      color: var(--rep-text-dim); margin-top: 8px; font-style: italic;
     }
 
     .tiempo-wrapper-ind,
@@ -311,183 +599,380 @@
       transition: height 0.3s ease;
     }
 
-    @media (max-width: 1000px) { .rep-kpis { grid-template-columns: repeat(3,1fr); } }
+    @media (max-width: 1080px) { .rep-kpis { grid-template-columns: repeat(3,1fr); } }
     @media (max-width: 700px) {
+      .app-sidebar { display: none; }
+      .app-topbar { padding: 16px 18px; }
+      .dashboard-reportes { padding: 20px 18px 40px; }
       .rep-kpis { grid-template-columns: repeat(2,1fr); gap: 10px; }
       .rep-kpi { padding: 14px; }
-      .rep-kpi .valor { font-size: 1.5rem; }
+      .rep-kpi .valor { font-size: 1.4rem; }
       .rep-filtros button { padding: 7px 13px; font-size: 0.8rem; }
-      .rep-grafica-wrapper { height: 260px; }
+      .rep-grafica-wrapper { height: 240px; }
       .rep-header { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="navbar-logo">
-      <img src="LOGO-Photoroom.png" alt="Logo" />
-      <span>Reportes de Pedidos</span>
-    </div>
-    <ul class="navbar-links">
-      <li><a href="index.html">📦 Pedidos</a></li>
-      <li><a href="Reportes.html">📊 Reporte</a></li>
-    </ul>
-  </nav>
 
-  <div class="dashboard-reportes">
+  <div class="app-shell">
 
-    <div class="rep-header">
-      <h2>📊 Reporte de Pedidos por Auxiliar</h2>
-      <div class="rep-header-controls">
-        <div id="refresh-badge">
-          <span class="dot"></span>
-          <span id="refresh-texto">Actualiza en 5:00</span>
-        </div>
-        <button id="btn-exportar">⬇ Exportar CSV</button>
-      </div>
-    </div>
-
-    <div class="rep-filtros-row">
-      <div class="rep-filtros" id="rep-filtros">
-        <button data-rango="hoy" class="activo">Hoy</button>
-        <button data-rango="ayer">Ayer</button>
-        <button data-rango="semana">Esta semana</button>
-        <button data-rango="mes">Este mes</button>
-        <button data-rango="mesPasado">Mes pasado</button>
-        <button data-rango="todos">Todos</button>
-      </div>
-      <select id="sel-auxiliar">
-        <option value="">Todos los auxiliares</option>
-        <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
-        <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
-        <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
-        <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
-        <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
-        <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
-        <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
-        <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
-        <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
-        <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
-        <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
-        <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
-        <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
-        <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
-      </select>
-    </div>
-
-    <!-- KPIs -->
-    <div class="rep-kpis">
-      <div class="rep-kpi kpi-azul">
-        <div class="valor" id="kpi-pedidos">0</div>
-        <div class="etiqueta">Total de Pedidos</div>
-        <div id="tend-pedidos"></div>
-      </div>
-      <div class="rep-kpi kpi-azul">
-        <div class="valor" id="kpi-tiempo">0:00</div>
-        <div class="etiqueta">Tiempo prom. por Artículo (mm:ss)</div>
-        <div id="tend-tiempo"></div>
-      </div>
-      <div class="rep-kpi kpi-naranja">
-        <div class="valor" id="kpi-referencias">0</div>
-        <div class="etiqueta">Total de Referencias</div>
-        <div id="tend-referencias"></div>
-      </div>
-      <div class="rep-kpi kpi-naranja">
-        <div class="valor" id="kpi-bultos">0</div>
-        <div class="etiqueta">Total de Bultos</div>
-        <div id="tend-bultos"></div>
-      </div>
-      <div class="rep-kpi kpi-verde">
-        <div class="valor" id="kpi-monto">$0</div>
-        <div class="etiqueta">Monto Total</div>
-        <div id="tend-monto"></div>
-      </div>
-    </div>
-
-    <!-- FILA 1: Pedidos individuales + Pedidos equipos -->
-    <div class="graficas-grid">
-      <div class="rep-card">
-        <h3>👤 Pedidos y Referencias — Individuales</h3>
-        <div class="rep-card-subtitulo">
-          <span class="dot-ind"></span> Solo auxiliares individuales
-        </div>
-        <div class="rep-grafica-wrapper">
-          <canvas id="grafica-individuales"></canvas>
-        </div>
-        <p class="grafica-hint">💡 Haz clic en una barra para filtrar la gráfica de tiempo</p>
-      </div>
-
-      <div class="rep-card">
-        <h3>👥 Pedidos y Referencias — Equipos</h3>
-        <div class="rep-card-subtitulo">
-          <span class="dot-team"></span> Pedidos realizados en conjunto (sacador con "/")
-        </div>
-        <div id="grafica-equipos-wrapper" class="rep-grafica-wrapper compacta">
-          <canvas id="grafica-equipos"></canvas>
-        </div>
-        <div id="sin-equipos" class="sin-equipos-aviso" style="display:none">
-          No hay pedidos de equipo en este periodo.
-        </div>
-      </div>
-    </div>
-
-    <!-- FILA 2: Tiempo individuales + Tiempo equipos -->
-    <div class="graficas-tiempo-grid">
-
-      <div class="rep-card">
-        <h3>⏱ Tiempo por Artículo — Individuales (mm:ss)</h3>
-        <div class="rep-card-subtitulo">
-          <span class="dot-blue"></span> Solo auxiliares individuales
-        </div>
-        <div class="grafica-filtro-activo" id="chip-filtro-tiempo">
-          <span id="chip-filtro-nombre"></span>
-          <button onclick="limpiarFiltroGrafica()" title="Quitar filtro">✕</button>
-        </div>
-        <div class="tiempo-wrapper-ind" id="tiempo-wrapper-ind" style="height:320px;">
-          <canvas id="grafica-tiempo-ind"></canvas>
-        </div>
-        <div id="sin-ind-tiempo" class="sin-equipos-aviso" style="display:none;">
-          No hay datos individuales en este periodo.
+    <!-- ══════════ SIDEBAR ══════════ -->
+    <aside class="app-sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">S</div>
+        <div class="logo-text">
+          <strong>sujumi</strong>
+          <span>SUPERMERCADOS</span>
         </div>
       </div>
 
-      <div class="rep-card">
-        <h3>⏱ Tiempo por Artículo — Equipos (mm:ss)</h3>
-        <div class="rep-card-subtitulo">
-          <span class="dot-team"></span> Solo pedidos de equipo (con "/")
-        </div>
-        <div class="tiempo-wrapper-team" id="tiempo-wrapper-team" style="height:320px;">
-          <canvas id="grafica-tiempo-team"></canvas>
-        </div>
-        <div id="sin-team-tiempo" class="sin-equipos-aviso" style="display:none;">
-          No hay pedidos de equipo en este periodo.
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
+          Dashboard
+        </a>
+        <a href="index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"/></svg>
+          Pedidos
+        </a>
+        <a href="Reportes.html" class="activo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+          Reporte
+        </a>
+      </nav>
+
+      <div class="sidebar-section-label">Herramientas</div>
+      <nav class="sidebar-nav">
+        <a href="sacadores.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.4"/><path d="M23 20v-1a4 4 0 0 0-3-3.87"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/></svg>
+          Sacadores
+        </a>
+        <a href="productos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+          Productos
+        </a>
+        <a href="configuracion.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"/></svg>
+          Configuración
+        </a>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-info-box">
+        <h4>Información</h4>
+        <p>Los datos se actualizan cada 5 minutos.</p>
+        <div class="sidebar-info-divider"></div>
+        <div class="sidebar-clock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <div class="sidebar-clock-text">
+            <span id="sidebar-fecha">—</span>
+            <span id="sidebar-hora">—</span>
+          </div>
         </div>
       </div>
+    </aside>
 
-    </div>
+    <!-- ══════════ CONTENIDO ══════════ -->
+    <div class="app-content">
 
-    <!-- Tabla detalle -->
-    <div class="rep-card">
-      <h3>Detalle por Auxiliar</h3>
-      <div class="rep-tabla-wrapper">
-        <table class="rep-tabla">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Auxiliar</th>
-              <th>#Pedidos</th>
-              <th>#Referencias</th>
-              <th>Total de Bultos</th>
-              <th>Tiempo por Artículo (mm:ss)</th>
-              <th>Monto Total</th>
-            </tr>
-          </thead>
-          <tbody id="rep-tabla-body">
-            <tr><td colspan="7" class="rep-cargando">Cargando datos...</td></tr>
-          </tbody>
-          <tfoot id="rep-tabla-foot"></tfoot>
-        </table>
-      </div>
+      <header class="app-topbar">
+        <div class="app-topbar-title">
+          <h1>Reportes de Pedidos</h1>
+          <p>Analiza el desempeño de tus auxiliares en tiempo real</p>
+        </div>
+
+        <nav class="app-topbar-nav">
+          <a href="index.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"/></svg>
+            Pedidos
+          </a>
+          <a href="Reportes.html" class="activo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+            Reporte
+          </a>
+        </nav>
+
+        <div class="app-topbar-user">
+          <div class="avatar">JF</div>
+          <div class="user-meta">
+            <strong>Juan Francisco Jimenez</strong>
+            <span>Administrador</span>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </header>
+
+      <main class="dashboard-reportes">
+
+        <div class="rep-header">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+            Reporte de Pedidos por Auxiliar
+          </h2>
+          <div class="rep-header-controls">
+            <div id="refresh-badge">
+              <span class="dot"></span>
+              <span id="refresh-texto">Actualiza en 5:00</span>
+            </div>
+            <button id="btn-exportar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="rep-filtros-row">
+          <div class="rep-filtros" id="rep-filtros">
+            <button data-rango="hoy" class="activo">Hoy</button>
+            <button data-rango="ayer">Ayer</button>
+            <button data-rango="semana">Esta semana</button>
+            <button data-rango="mes">Este mes</button>
+            <button data-rango="mesPasado">Mes pasado</button>
+            <button data-rango="todos">Todos</button>
+          </div>
+          <select id="sel-auxiliar">
+            <option value="">Todos los auxiliares</option>
+            <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
+            <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
+            <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
+            <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
+            <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
+            <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
+            <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
+            <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
+            <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
+            <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
+            <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
+            <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
+            <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
+            <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
+          </select>
+        </div>
+
+        <!-- KPIs -->
+        <div class="rep-kpis">
+          <div class="rep-kpi kpi-verde">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="m9 13 2 2 4-4"/></svg>
+            </div>
+            <div class="valor" id="kpi-pedidos">0</div>
+            <div class="etiqueta">Total de Pedidos</div>
+            <div class="subtexto">Pedidos realizados</div>
+            <div id="tend-pedidos"></div>
+            <div class="rep-kpi-bar"><span></span></div>
+          </div>
+
+          <div class="rep-kpi kpi-azul">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </div>
+            <div class="valor" id="kpi-tiempo">0:00</div>
+            <div class="etiqueta">Tiempo prom. por Artículo</div>
+            <div class="subtexto">(mm:ss)</div>
+            <div id="tend-tiempo"></div>
+            <div class="rep-kpi-bar"><span></span></div>
+          </div>
+
+          <div class="rep-kpi kpi-naranja">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+            </div>
+            <div class="valor" id="kpi-referencias">0</div>
+            <div class="etiqueta">Total de Referencias</div>
+            <div class="subtexto">Referencias solicitadas</div>
+            <div id="tend-referencias"></div>
+            <div class="rep-kpi-bar"><span></span></div>
+          </div>
+
+          <div class="rep-kpi kpi-morado">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div class="valor" id="kpi-bultos">0</div>
+            <div class="etiqueta">Total de Bultos</div>
+            <div class="subtexto">Bultos procesados</div>
+            <div id="tend-bultos"></div>
+            <div class="rep-kpi-bar"><span></span></div>
+          </div>
+
+          <div class="rep-kpi kpi-verde">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="valor" id="kpi-monto">$0</div>
+            <div class="etiqueta">Monto Total</div>
+            <div class="subtexto">Valor total de pedidos</div>
+            <div id="tend-monto"></div>
+            <div class="rep-kpi-bar"><span></span></div>
+          </div>
+        </div>
+
+        <!-- FILA 1: Pedidos individuales + Pedidos equipos -->
+        <div class="graficas-grid">
+          <div class="rep-card">
+            <div class="rep-card-head">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.4"/></svg>
+                Pedidos y Referencias — Individuales
+              </h3>
+              <div class="rep-ver-por">
+                Ver por: <strong>Pedidos</strong>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="rep-card-subtitulo">
+              <span class="dot-ind"></span> Solo auxiliares individuales
+            </div>
+            <div id="grafica-individuales-wrapper" class="rep-grafica-wrapper">
+              <canvas id="grafica-individuales"></canvas>
+            </div>
+            <div id="sin-individuales" class="estado-vacio tipo-ind" style="display:none">
+              <div class="ilustracion">
+                <svg class="principal" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+              </div>
+              <h4>No hay datos para mostrar</h4>
+              <p>Aún no hay registros de pedidos individuales para el período seleccionado.</p>
+            </div>
+            <p class="grafica-hint">💡 Haz clic en una barra para filtrar la gráfica de tiempo</p>
+          </div>
+
+          <div class="rep-card">
+            <div class="rep-card-head">
+              <h3>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.4"/><path d="M23 20v-1a4 4 0 0 0-3-3.87"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/></svg>
+                Pedidos y Referencias — Equipos
+              </h3>
+              <div class="rep-ver-por">
+                Ver por: <strong>Pedidos</strong>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="rep-card-subtitulo">
+              <span class="dot-team"></span> Pedidos realizados en conjunto (sacador con "/")
+            </div>
+            <div id="grafica-equipos-wrapper" class="rep-grafica-wrapper compacta">
+              <canvas id="grafica-equipos"></canvas>
+            </div>
+            <div id="sin-equipos" class="estado-vacio tipo-team" style="display:none">
+              <div class="ilustracion">
+                <svg class="principal" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 3"/></svg>
+              </div>
+              <h4>No hay datos para mostrar</h4>
+              <p>Aún no hay registros de pedidos en equipo para el período seleccionado.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Franja informativa -->
+        <div class="rep-info-strip">
+          <div class="rep-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </div>
+            <div>
+              <h5>Monitorea en tiempo real</h5>
+              <p>Visualiza el rendimiento de tus auxiliares al instante.</p>
+            </div>
+          </div>
+          <div class="rep-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="m9 13 2 2 4-4"/></svg>
+            </div>
+            <div>
+              <h5>Toma decisiones inteligentes</h5>
+              <p>Usa los datos para optimizar procesos y aumentar la productividad.</p>
+            </div>
+          </div>
+          <div class="rep-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            </div>
+            <div>
+              <h5>Exporta tus reportes</h5>
+              <p>Descarga la información en CSV y analízala a tu manera.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILA 2: Tiempo individuales + Tiempo equipos -->
+        <div class="graficas-tiempo-grid">
+
+          <div class="rep-card">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Tiempo por Artículo — Individuales (mm:ss)
+            </h3>
+            <div class="rep-card-subtitulo">
+              <span class="dot-blue"></span> Solo auxiliares individuales
+            </div>
+            <div class="grafica-filtro-activo" id="chip-filtro-tiempo">
+              <span id="chip-filtro-nombre"></span>
+              <button onclick="limpiarFiltroGrafica()" title="Quitar filtro">✕</button>
+            </div>
+            <div class="tiempo-wrapper-ind" id="tiempo-wrapper-ind" style="height:320px;">
+              <canvas id="grafica-tiempo-ind"></canvas>
+            </div>
+            <div id="sin-ind-tiempo" class="estado-vacio tipo-ind" style="display:none;">
+              <div class="ilustracion">
+                <svg class="principal" viewBox="0 0 24 24" fill="none" stroke="#4FA3D1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </div>
+              <h4>No hay datos para mostrar</h4>
+              <p>No hay datos individuales de tiempo en este período.</p>
+            </div>
+          </div>
+
+          <div class="rep-card">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Tiempo por Artículo — Equipos (mm:ss)
+            </h3>
+            <div class="rep-card-subtitulo">
+              <span class="dot-team"></span> Solo pedidos de equipo (con "/")
+            </div>
+            <div class="tiempo-wrapper-team" id="tiempo-wrapper-team" style="height:320px;">
+              <canvas id="grafica-tiempo-team"></canvas>
+            </div>
+            <div id="sin-team-tiempo" class="estado-vacio tipo-team" style="display:none;">
+              <div class="ilustracion">
+                <svg class="principal" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </div>
+              <h4>No hay datos para mostrar</h4>
+              <p>No hay pedidos de equipo con tiempo en este período.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Tabla detalle -->
+        <div class="rep-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+            Detalle por Auxiliar
+          </h3>
+          <div class="rep-tabla-wrapper">
+            <table class="rep-tabla">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Auxiliar</th>
+                  <th>#Pedidos</th>
+                  <th>#Referencias</th>
+                  <th>Total de Bultos</th>
+                  <th>Tiempo por Artículo (mm:ss)</th>
+                  <th>Monto Total</th>
+                </tr>
+              </thead>
+              <tbody id="rep-tabla-body">
+                <tr><td colspan="7" class="rep-cargando">Cargando datos...</td></tr>
+              </tbody>
+              <tfoot id="rep-tabla-foot"></tfoot>
+            </table>
+          </div>
+        </div>
+
+      </main>
     </div>
   </div>
 
@@ -625,7 +1110,6 @@
       return "$"+n.toLocaleString("es-DO",{minimumFractionDigits:2,maximumFractionDigits:2});
     }
 
-    // ─── FIX: calcularKPIs ahora usa variable local sumaTiempos ───
     function calcularKPIs(pedidos) {
       let refs = 0, bultos = 0, monto = 0, sumaTiempos = 0, cantTiempos = 0;
       const vistos = new Set();
@@ -869,12 +1353,15 @@
           },
           {
             type: "line", label: "# Referencias", data: refs,
-            borderColor: "rgba(47,72,88,1)", backgroundColor: "rgba(47,72,88,0.15)",
+            borderColor: "rgba(148,163,184,0.9)", backgroundColor: "rgba(148,163,184,0.12)",
             borderWidth: 2, tension: 0.35, fill: true, pointRadius: 2, yAxisID: "y1",
             datalabels: { display: false }
           }
         ]
       };
+
+      const gridColor = "rgba(148,163,184,0.08)";
+      const tickColor = "#8B96A8";
 
       if (chartRef) {
         chartRef.data = dataConfig;
@@ -888,14 +1375,14 @@
           responsive: true, maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
           plugins: {
-            legend: { position: "top" },
+            legend: { position: "top", labels: { color: tickColor, font: { size: 11 } } },
             tooltip: { enabled: true },
             datalabels: { display: false }
           },
           scales: {
-            x:  { ticks: { autoSkip: false, maxRotation: 75, minRotation: 45, font: { size: 10 } } },
-            y:  { type: "linear", position: "left",  beginAtZero: true, title: { display: true, text: "# Pedidos" } },
-            y1: { type: "linear", position: "right", beginAtZero: true, title: { display: true, text: "# Referencias" }, grid: { drawOnChartArea: false } }
+            x:  { ticks: { autoSkip: false, maxRotation: 75, minRotation: 45, font: { size: 10 }, color: tickColor }, grid: { color: gridColor } },
+            y:  { type: "linear", position: "left",  beginAtZero: true, title: { display: true, text: "# Pedidos", color: tickColor }, ticks: { color: tickColor }, grid: { color: gridColor } },
+            y1: { type: "linear", position: "right", beginAtZero: true, title: { display: true, text: "# Referencias", color: tickColor }, ticks: { color: tickColor }, grid: { drawOnChartArea: false } }
           },
           onClick: onClickCb || null,
           onHover: onHoverCb || null
@@ -905,6 +1392,17 @@
 
     // ─── Gráfica individuales ─────────────────────────────────
     function renderizarGraficaIndividuales(filasInd) {
+      const wrapper = document.getElementById("grafica-individuales-wrapper");
+      const vacio   = document.getElementById("sin-individuales");
+
+      if (filasInd.length === 0) {
+        wrapper.style.display = "none";
+        vacio.style.display = "block";
+        return;
+      }
+      wrapper.style.display = "block";
+      vacio.style.display = "none";
+
       const onClick = (event, elements) => {
         if (!elements || !elements.length) return;
         const el = elements.find(e => e.datasetIndex === 0);
@@ -926,7 +1424,7 @@
 
       graficaIndividuales = renderizarGraficaBarras(
         "grafica-individuales", filasInd, graficaIndividuales,
-        "rgba(242,132,92,0.75)", "rgba(242,132,92,1)", onClick, onHover
+        "rgba(34,197,94,0.75)", "rgba(34,197,94,1)", onClick, onHover
       );
     }
 
@@ -974,6 +1472,9 @@
       const colores = filasOrdenadas.map(f => colorFn(f, maxTiempo));
       const bordes  = filasOrdenadas.map(f => colorBordeFn(f, maxTiempo));
 
+      const tickColor = "#8B96A8";
+      const gridColor = "rgba(148,163,184,0.08)";
+
       const dataConfig = {
         labels,
         datasets: [{
@@ -983,7 +1484,7 @@
           datalabels: {
             display: true, anchor: "end", align: "right",
             formatter: (v) => v > 0 ? minAMmss(v) : "0:00",
-            color: (ctx2) => (maxTiempo > 0 && ctx2.dataset.data[ctx2.dataIndex] === maxTiempo) ? "#BE185D" : "#4A6E8A",
+            color: (ctx2) => (maxTiempo > 0 && ctx2.dataset.data[ctx2.dataIndex] === maxTiempo) ? "#F472B6" : "#8B96A8",
             font: { size: 11, weight: "700" }, padding: { left: 4 }
           }
         }]
@@ -1007,8 +1508,8 @@
             datalabels: { display: true }
           },
           scales: {
-            x: { beginAtZero: true, title: { display: true, text: "Minutos" }, ticks: { callback: (v) => minAMmss(v) } },
-            y: { ticks: { font: { size: 11 } } }
+            x: { beginAtZero: true, title: { display: true, text: "Minutos", color: tickColor }, ticks: { callback: (v) => minAMmss(v), color: tickColor }, grid: { color: gridColor } },
+            y: { ticks: { font: { size: 11 }, color: tickColor }, grid: { color: gridColor } }
           }
         }
       });
@@ -1067,6 +1568,15 @@
       graficaTiempoTeam = _buildTiempoChart("grafica-tiempo-team", filasOrdenadas, colorFn, colorBordeFn, graficaTiempoTeam);
     }
 
+    // ─── Reloj sidebar ─────────────────────────────────────────
+    function actualizarRelojSidebar() {
+      const ahora = new Date();
+      const fechaEl = document.getElementById("sidebar-fecha");
+      const horaEl  = document.getElementById("sidebar-hora");
+      if (fechaEl) fechaEl.textContent = ahora.toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric" });
+      if (horaEl)  horaEl.textContent  = ahora.toLocaleTimeString("es-DO", { hour: "numeric", minute: "2-digit" });
+    }
+
     // ─── Event listeners ──────────────────────────────────────
     document.querySelectorAll("#rep-filtros button").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1088,7 +1598,11 @@
       exportarCSV(filasActuales, totalPedidos, totalReferencias, totalBultos, tiempoPromGeneral, totalMonto);
     });
 
-    document.addEventListener("DOMContentLoaded", () => { cargarReporte(rangoActual); });
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarReporte(rangoActual);
+      actualizarRelojSidebar();
+      setInterval(actualizarRelojSidebar, 30000);
+    });
   </script>
 </body>
 </html>
