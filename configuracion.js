@@ -22,12 +22,12 @@ function inicializarAutenticacionConfig() {
 }
 
 function mostrarModalLogin() {
-  document.getElementById("modal-login-overlay").style.display = "flex";
+  document.getElementById("modal-login-overlay").classList.add("open");
   document.getElementById("main-app").style.display = "none";
 }
 
 async function mostrarAppPrincipal() {
-  document.getElementById("modal-login-overlay").style.display = "none";
+  document.getElementById("modal-login-overlay").classList.remove("open");
   document.getElementById("main-app").style.display = "block";
 
   const usuario = GMApi.getUsuario();
@@ -190,11 +190,11 @@ function abrirModalUsuario(id = null) {
     document.getElementById("usr-rol").value = "Operador";
   }
 
-  overlay.style.display = "flex";
+  overlay.classList.add("open");
 }
 
 function cerrarModalUsuario() {
-  document.getElementById("modal-usuario-overlay").style.display = "none";
+  document.getElementById("modal-usuario-overlay").classList.remove("open");
   usuarioEditandoId = null;
 }
 
