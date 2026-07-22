@@ -219,6 +219,7 @@
     .dash-kpi .kpi-trend { font-size: 0.74rem; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 3px; }
     .dash-kpi .kpi-trend.sube { color: #4ADE80; }
     .dash-kpi .kpi-trend.baja { color: #F87171; }
+    .dash-kpi .kpi-trend.igual { color: var(--rep-text-light); }
     .dash-kpi .kpi-spark { width: 70px; height: 34px; flex-shrink: 0; }
 
     /* Row 2 */
@@ -251,6 +252,7 @@
       transition: background 0.15s ease, border-color 0.15s ease;
     }
     .accion-btn:hover { background: var(--rep-card-hover); }
+    .accion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .accion-btn .icon-wrap {
       width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -309,7 +311,7 @@
 
     .dash-ranking { padding: 6px 20px 18px; display: flex; flex-direction: column; gap: 16px; }
     .rank-row { display: flex; align-items: center; gap: 12px; }
-    .rank-nombre { font-size: 0.84rem; font-weight: 700; color: var(--rep-text); width: 78px; flex-shrink: 0; }
+    .rank-nombre { font-size: 0.84rem; font-weight: 700; color: var(--rep-text); width: 78px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rank-bar-track { flex: 1; height: 9px; border-radius: 999px; background: var(--rep-border); overflow: hidden; }
     .rank-bar-fill { height: 100%; border-radius: 999px; }
     .rank-valor { font-size: 0.82rem; font-weight: 800; color: var(--rep-text); width: 26px; text-align: right; flex-shrink: 0; }
@@ -339,22 +341,6 @@
     .dash-info-item .meta-fill { height: 100%; border-radius: 999px; background: var(--rep-accent); }
     .dash-info-item .meta-pct { font-size: 0.78rem; font-weight: 800; color: var(--rep-text); }
 
-    /* Actividad reciente (usado si se agrega) */
-    .actividad-lista { display: flex; flex-direction: column; gap: 14px; padding: 6px 20px 18px; }
-    .actividad-item { display: flex; align-items: flex-start; gap: 11px; }
-    .actividad-item .icon-wrap {
-      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .actividad-item .icon-wrap svg { width: 14px; height: 14px; }
-    .actividad-item.act-verde .icon-wrap  { background: rgba(34,197,94,0.16);  color: var(--rep-primary); }
-    .actividad-item.act-naranja .icon-wrap{ background: rgba(242,132,92,0.16); color: var(--rep-accent); }
-    .actividad-item.act-azul .icon-wrap   { background: rgba(59,130,246,0.16); color: var(--rep-accent-blue); }
-    .actividad-item .act-texto { flex: 1; min-width: 0; }
-    .actividad-item .act-texto strong { display: block; font-size: 0.82rem; font-weight: 700; color: var(--rep-text); }
-    .actividad-item .act-texto span.act-sub { display: block; font-size: 0.76rem; color: var(--rep-text-light); }
-    .actividad-item .act-tiempo { font-size: 0.72rem; color: var(--rep-text-dim); white-space: nowrap; flex-shrink: 0; }
-
     @media (max-width: 1300px) { .dash-kpis { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 900px)  { .dash-kpis { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 700px) {
@@ -363,6 +349,8 @@
       .dash-main { padding: 20px 18px 40px; }
       .dash-kpi { padding: 14px; }
     }
+
+    .dash-cargando { text-align: center; color: var(--rep-text-light); padding: 30px 0; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -388,7 +376,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"/></svg>
           Pedidos
         </a>
-        <a href="sacadores.html">
+        <a href="Sacadores.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.4"/><path d="M23 20v-1a4 4 0 0 0-3-3.87"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/></svg>
           Sacadores
         </a>
@@ -400,9 +388,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
           Reportes
         </a>
-        <a href="horas-extras.html">
+        <a href="Historial.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          Horas Extras
+          Pedidos Finalizados
         </a>
         <a href="configuracion.html">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"/></svg>
@@ -422,9 +410,9 @@
       </div>
 
       <div class="sidebar-user-footer">
-        <div class="avatar">JF</div>
+        <div class="avatar" id="sidebar-avatar">--</div>
         <div class="user-meta">
-          <strong>Juan Francisco</strong>
+          <strong id="sidebar-nombre">Usuario</strong>
           <span>Administrador</span>
         </div>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -445,14 +433,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
             Reportes
           </a>
-          <div class="btn-bell">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            <span class="badge-count">3</span>
-          </div>
           <div class="app-topbar-user">
-            <div class="avatar">JF</div>
+            <div class="avatar" id="topbar-avatar">--</div>
             <div class="user-meta">
-              <strong>Juan Francisco Jimenez</strong>
+              <strong id="topbar-nombre">Usuario</strong>
               <span>Administrador</span>
             </div>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -469,11 +453,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="m9 13 2 2 4-4"/></svg>
             </div>
             <div class="kpi-body">
-              <div class="kpi-label">Total de Pedidos</div>
-              <div class="kpi-valor">128</div>
-              <div class="kpi-trend sube">↑ 18% vs. ayer</div>
+              <div class="kpi-label">Total de Pedidos (hoy)</div>
+              <div class="kpi-valor" id="kpi-pedidos">0</div>
+              <div class="kpi-trend" id="tend-pedidos"></div>
             </div>
-            <canvas class="dash-kpi-spark" id="spark-pedidos"></canvas>
           </div>
 
           <div class="dash-kpi kpi-azul">
@@ -482,10 +465,9 @@
             </div>
             <div class="kpi-body">
               <div class="kpi-label">Tiempo prom. por Artículo</div>
-              <div class="kpi-valor">02:35</div>
-              <div class="kpi-trend baja">↓ 8% vs. ayer</div>
+              <div class="kpi-valor" id="kpi-tiempo">0:00</div>
+              <div class="kpi-trend" id="tend-tiempo"></div>
             </div>
-            <canvas class="dash-kpi-spark" id="spark-tiempo"></canvas>
           </div>
 
           <div class="dash-kpi kpi-naranja">
@@ -494,10 +476,9 @@
             </div>
             <div class="kpi-body">
               <div class="kpi-label">Total de Referencias</div>
-              <div class="kpi-valor">256</div>
-              <div class="kpi-trend sube">↑ 12% vs. ayer</div>
+              <div class="kpi-valor" id="kpi-referencias">0</div>
+              <div class="kpi-trend" id="tend-referencias"></div>
             </div>
-            <canvas class="dash-kpi-spark" id="spark-referencias"></canvas>
           </div>
 
           <div class="dash-kpi kpi-morado">
@@ -506,10 +487,9 @@
             </div>
             <div class="kpi-body">
               <div class="kpi-label">Total de Bultos</div>
-              <div class="kpi-valor">42</div>
-              <div class="kpi-trend sube">↑ 5% vs. ayer</div>
+              <div class="kpi-valor" id="kpi-bultos">0</div>
+              <div class="kpi-trend" id="tend-bultos"></div>
             </div>
-            <canvas class="dash-kpi-spark" id="spark-bultos"></canvas>
           </div>
 
           <div class="dash-kpi kpi-verde">
@@ -518,10 +498,9 @@
             </div>
             <div class="kpi-body">
               <div class="kpi-label">Monto Total</div>
-              <div class="kpi-valor">$25,840</div>
-              <div class="kpi-trend sube">↑ 22% vs. ayer</div>
+              <div class="kpi-valor" id="kpi-monto">$0</div>
+              <div class="kpi-trend" id="tend-monto"></div>
             </div>
-            <canvas class="dash-kpi-spark" id="spark-monto"></canvas>
           </div>
         </div>
 
@@ -537,20 +516,20 @@
             <div class="dash-donut-wrap">
               <div class="dash-donut-chart">
                 <canvas id="donut-estado"></canvas>
-                <div class="dash-donut-center"><strong>128</strong><span>Total</span></div>
+                <div class="dash-donut-center"><strong id="donut-total">0</strong><span>Total</span></div>
               </div>
               <div class="dash-donut-legend">
                 <div class="leg-row">
                   <span class="leg-label"><span class="leg-dot" style="background:#22C55E"></span>Activos</span>
-                  <span class="leg-val">78 (61%)</span>
+                  <span class="leg-val" id="leg-activos">0 (0%)</span>
                 </div>
                 <div class="leg-row">
                   <span class="leg-label"><span class="leg-dot" style="background:#3B82F6"></span>Pausados</span>
-                  <span class="leg-val">24 (19%)</span>
+                  <span class="leg-val" id="leg-pausados">0 (0%)</span>
                 </div>
                 <div class="leg-row">
                   <span class="leg-label"><span class="leg-dot" style="background:#F2845C"></span>Finalizados</span>
-                  <span class="leg-val">26 (20%)</span>
+                  <span class="leg-val" id="leg-finalizados">0 (0%)</span>
                 </div>
               </div>
             </div>
@@ -573,22 +552,22 @@
               <h3>Acciones rápidas</h3>
             </div>
             <div class="dash-acciones">
-              <button class="accion-btn accion-verde">
+              <button class="accion-btn accion-verde" onclick="window.location.href='index.html'">
                 <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/></svg></span>
-                <span class="accion-texto"><strong>Agregar Pedido</strong><span>Crear un nuevo pedido</span></span>
+                <span class="accion-texto"><strong>Agregar Pedido</strong><span>Ir a Gestión de Pedidos</span></span>
                 <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
               </button>
-              <button class="accion-btn accion-naranja">
+              <button class="accion-btn accion-naranja" id="btn-pausar-todos" onclick="pausarTodosDashboard()">
                 <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg></span>
                 <span class="accion-texto"><strong>Pausar Todos</strong><span>Pausar todos los pedidos activos</span></span>
                 <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
               </button>
-              <button class="accion-btn accion-azul">
+              <button class="accion-btn accion-azul" id="btn-reanudar-todos" onclick="reanudarTodosDashboard()">
                 <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></span>
-                <span class="accion-texto"><strong>Reanudar Todos</strong><span>Reanudar todos los pedidos</span></span>
+                <span class="accion-texto"><strong>Reanudar Todos</strong><span>Reanudar todos los pedidos pausados</span></span>
                 <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
               </button>
-              <button class="accion-btn accion-roja">
+              <button class="accion-btn accion-roja" id="btn-eliminar-todos" onclick="eliminarTodosDashboard()">
                 <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg></span>
                 <span class="accion-texto"><strong>Eliminar Todos</strong><span>Eliminar todos los pedidos</span></span>
                 <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
@@ -609,10 +588,12 @@
                 <thead>
                   <tr>
                     <th>Código</th><th>Sacador</th><th>Estado</th><th>Productos</th>
-                    <th>Inicio</th><th>Fin estimado</th><th>Tiempo restante</th><th>Acciones</th>
+                    <th>Inicio</th><th>Fin</th><th>Tiempo</th><th>Acciones</th>
                   </tr>
                 </thead>
-                <tbody id="tabla-pedidos-recientes"></tbody>
+                <tbody id="tabla-pedidos-recientes">
+                  <tr><td colspan="8" class="dash-cargando">Cargando datos...</td></tr>
+                </tbody>
               </table>
             </div>
             <div class="dash-tabla-footer"><a href="index.html">Ver todos los pedidos →</a></div>
@@ -625,7 +606,9 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
               </div>
             </div>
-            <div class="dash-ranking" id="ranking-sacadores"></div>
+            <div class="dash-ranking" id="ranking-sacadores">
+              <div class="dash-cargando">Cargando datos...</div>
+            </div>
             <div class="dash-tabla-footer"><a href="Reportes.html">Ver ranking completo →</a></div>
           </div>
         </div>
@@ -636,25 +619,25 @@
             <div class="icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             </div>
-            <h5>Actualización en tiempo real</h5>
-            <p>Los datos se actualizan automáticamente cada 5 minutos.</p>
+            <h5>Datos en vivo</h5>
+            <p id="info-actualizado">Sincronizado con la base de datos hace instantes.</p>
           </div>
           <div class="dash-info-item">
             <div class="icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 4h3a2 2 0 0 1-2 2h-1"/><path d="M7 4H4a2 2 0 0 0 2 2h1"/></svg>
             </div>
             <h5>Rendimiento del día</h5>
-            <p>Vas 18% arriba en pedidos completados comparado con ayer.</p>
+            <p id="info-rendimiento">Comparado con ayer.</p>
           </div>
           <div class="dash-info-item">
             <div class="icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3"/></svg>
             </div>
-            <h5>Meta del día</h5>
-            <p>128 / 150 pedidos completados</p>
+            <h5>Pedidos finalizados hoy</h5>
+            <p id="info-finalizados-txt">0 de 0 pedidos de hoy</p>
             <div class="meta-progress">
-              <div class="meta-track"><div class="meta-fill" style="width:85%"></div></div>
-              <span class="meta-pct">85%</span>
+              <div class="meta-track"><div class="meta-fill" id="meta-fill" style="width:0%"></div></div>
+              <span class="meta-pct" id="meta-pct">0%</span>
             </div>
           </div>
           <div class="dash-info-item">
@@ -670,139 +653,239 @@
     </div>
   </div>
 
+  <!-- gm-api.js debe cargarse ANTES del script del dashboard -->
+  <script src="gm-api.js"></script>
   <script>
-    // ─── Datos de muestra (placeholder — conectar a Supabase/SheetBest) ───
-    const DATOS_RECIENTES = [
-      { codigo:"PED-00128", sacador:"Carlos M.", estado:"activo",     productos:18, inicio:"10:15 a.m.", fin:"11:15 a.m.", restante:"00:32:45", accion:"ver"  },
-      { codigo:"PED-00127", sacador:"Ana G.",    estado:"pausado",    productos:12, inicio:"09:45 a.m.", fin:"10:45 a.m.", restante:"Pausado",  accion:"play" },
-      { codigo:"PED-00126", sacador:"Luis R.",   estado:"activo",     productos:25, inicio:"10:30 a.m.", fin:"11:30 a.m.", restante:"00:47:12", accion:"ver"  },
-      { codigo:"PED-00125", sacador:"María S.",  estado:"finalizado", productos:8,  inicio:"09:20 a.m.", fin:"10:20 a.m.", restante:"—",         accion:"ver"  },
-      { codigo:"PED-00124", sacador:"Pedro L.",  estado:"pausado",    productos:30, inicio:"08:00 a.m.", fin:"08:45 a.m.", restante:"Pausado",  accion:"play" }
-    ];
+    // ============================================================
+    //  Dashboard conectado a GMApi (Railway + Supabase)
+    // ============================================================
 
-    const RANKING_SACADORES = [
-      { nombre:"Carlos M.", valor:28, color:"#22C55E" },
-      { nombre:"Ana G.",    valor:22, color:"#F2845C" },
-      { nombre:"Luis R.",   valor:18, color:"#3B82F6" },
-      { nombre:"María S.",  valor:15, color:"#A78BFA" },
-      { nombre:"Pedro L.",  valor:12, color:"#4FA3D1" }
-    ];
+    let TODOS_PEDIDOS = []; // cache en memoria de la última carga completa
+
+    // ─── Helpers de fecha/formato ─────────────────────────────
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function esMismaFecha(f1, f2) {
+      return f1.getFullYear() === f2.getFullYear() && f1.getMonth() === f2.getMonth() && f1.getDate() === f2.getDate();
+    }
+
+    function esHoy(fechaStr) {
+      const f = new Date(fechaStr);
+      if (isNaN(f.getTime())) return false;
+      return esMismaFecha(f, new Date());
+    }
+
+    function esAyer(fechaStr) {
+      const f = new Date(fechaStr);
+      if (isNaN(f.getTime())) return false;
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      return esMismaFecha(f, ayer);
+    }
+
+    function formatTimeMmSs(totalSegundos) {
+      if (!totalSegundos || isNaN(totalSegundos) || totalSegundos < 0) return "0:00";
+      const mm = Math.floor(totalSegundos / 60);
+      const ss = String(Math.floor(totalSegundos % 60)).padStart(2, "0");
+      return `${mm}:${ss}`;
+    }
+
+    function formatHHMMSS(totalSegundos) {
+      totalSegundos = Math.max(0, Math.floor(Number(totalSegundos) || 0));
+      const h = Math.floor(totalSegundos / 3600);
+      const m = Math.floor((totalSegundos % 3600) / 60);
+      const s = totalSegundos % 60;
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    function formatNumero(n) {
+      return Math.round(n || 0).toLocaleString("es-DO");
+    }
+
+    function formatMonto(n) {
+      n = n || 0;
+      return "$" + n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     function iniciales(nombre) {
-      return nombre.split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase();
+      return String(nombre || "").trim().split(" ").filter(Boolean).map(p => p[0]).join("").slice(0, 2).toUpperCase() || "--";
     }
 
-    function renderTablaRecientes() {
-      const tbody = document.getElementById("tabla-pedidos-recientes");
-      tbody.innerHTML = DATOS_RECIENTES.map(p => {
-        const estadoTxt = p.estado === "activo" ? "Activo" : p.estado === "pausado" ? "Pausado" : "Finalizado";
-        const restanteHtml = p.restante === "Pausado"
-          ? `<span class="estado-badge pausado">Pausado</span>`
-          : p.restante;
-        const btn = p.accion === "ver"
-          ? `<button class="btn-tabla-accion ver" title="Ver"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>`
-          : `<button class="btn-tabla-accion play" title="Reanudar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></button>`;
-        return `<tr>
-          <td>${p.codigo}</td>
-          <td><div class="sacador-cell"><span class="sacador-avatar">${iniciales(p.sacador)}</span>${p.sacador}</div></td>
-          <td><span class="estado-badge ${p.estado}">${estadoTxt}</span></td>
-          <td>${p.productos} productos</td>
-          <td>${p.inicio}</td>
-          <td>${p.fin}</td>
-          <td>${restanteHtml}</td>
-          <td>${btn}</td>
-        </tr>`;
-      }).join("");
+    function esEquipo(sacador) {
+      return /\//.test(String(sacador || "").trim());
     }
 
-    function renderRanking() {
-      const wrap = document.getElementById("ranking-sacadores");
-      const max = Math.max(...RANKING_SACADORES.map(r => r.valor));
-      wrap.innerHTML = RANKING_SACADORES.map(r => `
-        <div class="rank-row">
-          <span class="rank-nombre">${r.nombre}</span>
-          <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${Math.round((r.valor/max)*100)}%; background:${r.color}"></div></div>
-          <span class="rank-valor">${r.valor}</span>
-        </div>
-      `).join("");
+    // ─── Cálculo de tiempo transcurrido "simple" (sin descuentos de
+    //     almuerzo/breaks) para pedidos activos/pausados en el dashboard.
+    //     El cálculo laborable exacto vive en script.js (index.html);
+    //     aquí solo mostramos un aproximado en tiempo real. ───
+    function segundosTranscurridos(pedido) {
+      if (pedido.estatus === "Finalizado") {
+        return pedido.tiempo_total_segundos || 0;
+      }
+      if (!Array.isArray(pedido.segmentos) || pedido.segmentos.length === 0) {
+        const inicio = new Date(pedido.hora_inicio).getTime();
+        return Math.max(0, Math.floor((Date.now() - inicio) / 1000));
+      }
+      let total = 0;
+      for (const seg of pedido.segmentos) {
+        const ini = new Date(seg.inicio).getTime();
+        const fin = seg.fin ? new Date(seg.fin).getTime() : Date.now();
+        if (fin > ini) total += Math.floor((fin - ini) / 1000);
+      }
+      return total;
     }
 
-    function renderSaludo() {
-      const nombre = "Juan Francisco";
-      const h = new Date().getHours();
-      const momento = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
-      document.getElementById("saludo-titulo").textContent = `${momento}, ${nombre}! 👋`;
+    // ─── Carga de datos desde el backend ──────────────────────
+    async function cargarTodosPedidos() {
+      const [enProceso, pausados, finalizados] = await Promise.all([
+        GMApi.obtenerPedidos("En Proceso"),
+        GMApi.obtenerPedidos("Pausado"),
+        GMApi.obtenerPedidos("Finalizado")
+      ]);
+      return [...enProceso, ...pausados, ...finalizados];
     }
 
-    function renderPeriodo() {
-      const ahora = new Date();
-      const fechaStr = ahora.toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric" });
-      document.getElementById("periodo-actual").textContent = `${fechaStr} · 06:00 a.m. – 11:59 p.m.`;
+    function calcularKPIsDelDia(pedidos, fechaMatcher) {
+      const deHoy = pedidos.filter(p => fechaMatcher(p.hora_inicio));
+      const finalizadosHoy = deHoy.filter(p => p.estatus === "Finalizado");
+
+      const referencias = deHoy.reduce((acc, p) => acc + (Number(p.cantidad_referencias) || 0), 0);
+      const bultos = finalizadosHoy.reduce((acc, p) => acc + (Number(p.bultos) || 0), 0);
+      const monto = finalizadosHoy.reduce((acc, p) => acc + (Number(p.monto_final) || 0), 0);
+
+      const tiemposValidos = finalizadosHoy
+        .map(p => Number(p.tiempo_por_producto_segundos))
+        .filter(t => t > 0);
+      const tiempoProm = tiemposValidos.length > 0
+        ? tiemposValidos.reduce((a, b) => a + b, 0) / tiemposValidos.length
+        : 0;
+
+      return {
+        totalPedidos: deHoy.length,
+        referencias,
+        bultos,
+        monto,
+        tiempoProm,
+        finalizadosCount: finalizadosHoy.length
+      };
     }
 
-    function actualizarRelojSidebar() {
-      const ahora = new Date();
-      document.getElementById("sidebar-hora").textContent = ahora.toLocaleTimeString("es-DO", { hour12: false });
-      document.getElementById("sidebar-fecha").textContent = ahora.toLocaleDateString("es-DO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    function renderTendencia(idEl, actual, anterior) {
+      const el = document.getElementById(idEl);
+      if (!el) return;
+      if (!anterior) { el.innerHTML = ""; return; }
+      const pct = ((actual - anterior) / anterior) * 100;
+      const abs = Math.abs(pct).toFixed(1);
+      if (pct > 0.5)       el.innerHTML = `<span class="sube">↑ ${abs}% vs. ayer</span>`;
+      else if (pct < -0.5) el.innerHTML = `<span class="baja">↓ ${abs}% vs. ayer</span>`;
+      else                 el.innerHTML = `<span class="igual">= Sin cambio</span>`;
     }
 
-    // ─── Gráficas ───────────────────────────────────────
-    function crearSparkline(id, data, color) {
-      const ctx = document.getElementById(id).getContext("2d");
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: data.map((_, i) => i),
-          datasets: [{
-            data, borderColor: color, borderWidth: 2, pointRadius: 0,
-            tension: 0.4, fill: true,
-            backgroundColor: (ctxb) => {
-              const g = ctxb.chart.ctx.createLinearGradient(0, 0, 0, 34);
-              g.addColorStop(0, color + "55");
-              g.addColorStop(1, color + "00");
-              return g;
-            }
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { enabled: false } },
-          scales: { x: { display: false }, y: { display: false } },
-          elements: { line: { borderJoinStyle: "round" } }
-        }
-      });
+    function renderKPIs(hoy, ayer) {
+      document.getElementById("kpi-pedidos").textContent     = formatNumero(hoy.totalPedidos);
+      document.getElementById("kpi-tiempo").textContent      = formatTimeMmSs(hoy.tiempoProm);
+      document.getElementById("kpi-referencias").textContent = formatNumero(hoy.referencias);
+      document.getElementById("kpi-bultos").textContent      = formatNumero(hoy.bultos);
+      document.getElementById("kpi-monto").textContent       = formatMonto(hoy.monto);
+
+      renderTendencia("tend-pedidos",     hoy.totalPedidos, ayer.totalPedidos);
+      renderTendencia("tend-tiempo",      hoy.tiempoProm,   ayer.tiempoProm);
+      renderTendencia("tend-referencias", hoy.referencias,  ayer.referencias);
+      renderTendencia("tend-bultos",      hoy.bultos,       ayer.bultos);
+      renderTendencia("tend-monto",       hoy.monto,        ayer.monto);
     }
 
-    function crearDonutEstado() {
+    // ─── Estado (donut) ────────────────────────────────────────
+    let chartDonut = null;
+
+    function renderEstado(pedidos) {
+      // Activos y pausados: estado actual real, sin filtrar por fecha
+      // (un pedido puede haber iniciado ayer y seguir activo hoy).
+      const activos  = pedidos.filter(p => p.estatus === "En Proceso").length;
+      const pausados = pedidos.filter(p => p.estatus === "Pausado").length;
+      // Finalizados: solo los de hoy, para que el total no crezca sin límite.
+      const finalizadosHoy = pedidos.filter(p => p.estatus === "Finalizado" && esHoy(p.hora_inicio)).length;
+
+      const total = activos + pausados + finalizadosHoy || 1;
+
+      document.getElementById("donut-total").textContent = activos + pausados + finalizadosHoy;
+      document.getElementById("leg-activos").textContent     = `${activos} (${Math.round(activos/total*100)}%)`;
+      document.getElementById("leg-pausados").textContent    = `${pausados} (${Math.round(pausados/total*100)}%)`;
+      document.getElementById("leg-finalizados").textContent = `${finalizadosHoy} (${Math.round(finalizadosHoy/total*100)}%)`;
+
       const ctx = document.getElementById("donut-estado").getContext("2d");
-      new Chart(ctx, {
-        type: "doughnut",
-        data: {
-          labels: ["Activos", "Pausados", "Finalizados"],
-          datasets: [{
-            data: [78, 24, 26],
-            backgroundColor: ["#22C55E", "#3B82F6", "#F2845C"],
-            borderColor: "#131A24", borderWidth: 3, hoverOffset: 4
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          cutout: "72%",
-          plugins: { legend: { display: false }, tooltip: { enabled: true } }
-        }
-      });
+      const data = [activos, pausados, finalizadosHoy];
+      if (chartDonut) {
+        chartDonut.data.datasets[0].data = data;
+        chartDonut.update();
+      } else {
+        chartDonut = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["Activos", "Pausados", "Finalizados"],
+            datasets: [{
+              data, backgroundColor: ["#22C55E", "#3B82F6", "#F2845C"],
+              borderColor: "#131A24", borderWidth: 3, hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: "72%",
+            plugins: { legend: { display: false }, tooltip: { enabled: true } }
+          }
+        });
+      }
+
+      // Info: meta / finalizados
+      const totalHoy = pedidos.filter(p => esHoy(p.hora_inicio)).length || 0;
+      const pct = totalHoy > 0 ? Math.round((finalizadosHoy / totalHoy) * 100) : 0;
+      document.getElementById("info-finalizados-txt").textContent = `${finalizadosHoy} de ${totalHoy} pedidos de hoy`;
+      document.getElementById("meta-fill").style.width = pct + "%";
+      document.getElementById("meta-pct").textContent = pct + "%";
     }
 
-    function crearChartPorHora() {
-      const horas = ["06:00","07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
-      const valores = [3,7,12,18,24,32,42,38,30,26,22,20,17,10,4];
+    // ─── Pedidos por hora ───────────────────────────────────────
+    let chartPorHora = null;
+
+    function renderPorHora(pedidos) {
+      const deHoy = pedidos.filter(p => esHoy(p.hora_inicio));
+      const conteoHoras = new Array(24).fill(0);
+      deHoy.forEach(p => {
+        const h = new Date(p.hora_inicio).getHours();
+        if (!isNaN(h)) conteoHoras[h]++;
+      });
+
+      // Mostrar solo el rango con actividad (o 6am-8pm por defecto si no hay datos)
+      let inicio = 6, fin = 20;
+      const horasConDatos = conteoHoras.map((v, i) => v > 0 ? i : null).filter(v => v !== null);
+      if (horasConDatos.length > 0) {
+        inicio = Math.min(inicio, Math.min(...horasConDatos));
+        fin = Math.max(fin, Math.max(...horasConDatos));
+      }
+
+      const labels = [];
+      const valores = [];
+      for (let h = inicio; h <= fin; h++) {
+        labels.push(`${pad(h)}:00`);
+        valores.push(conteoHoras[h]);
+      }
+
       const ctx = document.getElementById("chart-por-hora").getContext("2d");
       const gridColor = "rgba(148,163,184,0.08)";
       const tickColor = "#8B96A8";
-      new Chart(ctx, {
+
+      if (chartPorHora) {
+        chartPorHora.data.labels = labels;
+        chartPorHora.data.datasets[0].data = valores;
+        chartPorHora.update();
+        return;
+      }
+
+      chartPorHora = new Chart(ctx, {
         type: "line",
         data: {
-          labels: horas,
+          labels,
           datasets: [{
             label: "Pedidos", data: valores,
             borderColor: "#22C55E", borderWidth: 2.5, pointRadius: 3,
@@ -828,28 +911,235 @@
           },
           scales: {
             x: { ticks: { color: tickColor, font: { size: 10 } }, grid: { display: false } },
-            y: { beginAtZero: true, ticks: { color: tickColor, font: { size: 10 } }, grid: { color: gridColor } }
+            y: { beginAtZero: true, ticks: { color: tickColor, font: { size: 10 }, stepSize: 1 }, grid: { color: gridColor } }
           }
         }
       });
     }
 
+    // ─── Tabla de pedidos recientes ─────────────────────────────
+    function renderTablaRecientes(pedidos) {
+      const tbody = document.getElementById("tabla-pedidos-recientes");
+      const recientes = [...pedidos]
+        .sort((a, b) => new Date(b.hora_inicio) - new Date(a.hora_inicio))
+        .slice(0, 8);
+
+      if (recientes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="dash-cargando">No hay pedidos registrados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = recientes.map(p => {
+        const estadoClase = p.estatus === "En Proceso" ? "activo" : p.estatus === "Pausado" ? "pausado" : "finalizado";
+        const estadoTxt   = p.estatus === "En Proceso" ? "Activo" : p.estatus === "Pausado" ? "Pausado" : "Finalizado";
+        const inicioTxt = new Date(p.hora_inicio).toLocaleTimeString("es-DO", { hour: "numeric", minute: "2-digit" });
+        const finTxt = p.hora_fin ? new Date(p.hora_fin).toLocaleTimeString("es-DO", { hour: "numeric", minute: "2-digit" }) : "—";
+        const tiempoTxt = formatHHMMSS(segundosTranscurridos(p));
+
+        let btn;
+        if (p.estatus === "Pausado") {
+          btn = `<button class="btn-tabla-accion play" title="Reanudar" onclick="reanudarUnoDashboard('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></button>`;
+        } else {
+          btn = `<a class="btn-tabla-accion ver" title="Ver en Pedidos" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></a>`;
+        }
+
+        const nombreMostrar = esEquipo(p.sacador) ? p.sacador.split("/")[0].trim() + " +eq." : p.sacador;
+
+        return `<tr>
+          <td>${p.numero_pedido}</td>
+          <td><div class="sacador-cell"><span class="sacador-avatar">${iniciales(p.sacador)}</span>${nombreMostrar}</td>
+          <td><span class="estado-badge ${estadoClase}">${estadoTxt}</span></td>
+          <td>${p.cantidad_referencias ?? 0} productos</td>
+          <td>${inicioTxt}</td>
+          <td>${finTxt}</td>
+          <td>${tiempoTxt}</td>
+          <td>${btn}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    // ─── Ranking de sacadores (Top 5, hoy) ──────────────────────
+    function renderRanking(pedidos) {
+      const wrap = document.getElementById("ranking-sacadores");
+      const deHoy = pedidos.filter(p => esHoy(p.hora_inicio));
+
+      const conteos = {};
+      deHoy.forEach(p => {
+        const nombre = String(p.sacador || "Sin asignar").trim();
+        conteos[nombre] = (conteos[nombre] || 0) + 1;
+      });
+
+      const colores = ["#22C55E", "#F2845C", "#3B82F6", "#A78BFA", "#4FA3D1"];
+      const top5 = Object.entries(conteos)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      if (top5.length === 0) {
+        wrap.innerHTML = `<div class="dash-cargando">Aún no hay pedidos hoy.</div>`;
+        return;
+      }
+
+      const max = top5[0][1];
+      wrap.innerHTML = top5.map(([nombre, valor], i) => `
+        <div class="rank-row">
+          <span class="rank-nombre" title="${nombre}">${nombre.split(" ")[0]}</span>
+          <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${Math.round((valor/max)*100)}%; background:${colores[i]}"></div></div>
+          <span class="rank-valor">${valor}</span>
+        </div>
+      `).join("");
+    }
+
+    // ─── Saludo / reloj / período ──────────────────────────────
+    function renderSaludo() {
+      const usuario = GMApi.getUsuario();
+      const nombre = (usuario && usuario.nombre) ? usuario.nombre.split(" ")[0] : "";
+      const h = new Date().getHours();
+      const momento = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+      document.getElementById("saludo-titulo").textContent = `${momento}${nombre ? ", " + nombre : ""}! 👋`;
+
+      const nombreCompleto = (usuario && usuario.nombre) || "Usuario";
+      document.getElementById("sidebar-nombre").textContent = nombreCompleto;
+      document.getElementById("topbar-nombre").textContent = nombreCompleto;
+      document.getElementById("sidebar-avatar").textContent = iniciales(nombreCompleto);
+      document.getElementById("topbar-avatar").textContent = iniciales(nombreCompleto);
+    }
+
+    function renderPeriodo() {
+      const ahora = new Date();
+      const fechaStr = ahora.toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric" });
+      document.getElementById("periodo-actual").textContent = fechaStr;
+    }
+
+    function actualizarRelojSidebar() {
+      const ahora = new Date();
+      document.getElementById("sidebar-hora").textContent = ahora.toLocaleTimeString("es-DO", { hour12: false });
+      document.getElementById("sidebar-fecha").textContent = ahora.toLocaleDateString("es-DO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+
+    // ─── Acciones rápidas (replican la lógica de segmentos de script.js) ───
+    async function pausarTodosDashboard() {
+      const btn = document.getElementById("btn-pausar-todos");
+      btn.disabled = true;
+      try {
+        const activos = TODOS_PEDIDOS.filter(p => p.estatus === "En Proceso");
+        for (const p of activos) {
+          const ahora = new Date().toISOString();
+          const segmentos = Array.isArray(p.segmentos) && p.segmentos.length > 0
+            ? p.segmentos
+            : [{ inicio: p.hora_inicio, fin: null }];
+          const ultimo = segmentos[segmentos.length - 1];
+          if (ultimo && ultimo.fin === null) ultimo.fin = ahora;
+          await GMApi.actualizarPedido(p.id, { estatus: "Pausado", segmentos });
+        }
+        await refrescarDashboard();
+      } catch (err) {
+        console.error("❌ Error pausando todos:", err);
+        alert("Ocurrió un error pausando los pedidos. Intenta de nuevo.");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function reanudarTodosDashboard() {
+      const btn = document.getElementById("btn-reanudar-todos");
+      btn.disabled = true;
+      try {
+        const pausados = TODOS_PEDIDOS.filter(p => p.estatus === "Pausado");
+        for (const p of pausados) {
+          const ahora = new Date().toISOString();
+          const segmentos = Array.isArray(p.segmentos) ? p.segmentos : [];
+          segmentos.push({ inicio: ahora, fin: null });
+          await GMApi.actualizarPedido(p.id, { estatus: "En Proceso", segmentos });
+        }
+        await refrescarDashboard();
+      } catch (err) {
+        console.error("❌ Error reanudando todos:", err);
+        alert("Ocurrió un error reanudando los pedidos. Intenta de nuevo.");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function reanudarUnoDashboard(id) {
+      try {
+        const p = TODOS_PEDIDOS.find(x => String(x.id) === String(id));
+        if (!p) return;
+        const ahora = new Date().toISOString();
+        const segmentos = Array.isArray(p.segmentos) ? p.segmentos : [];
+        segmentos.push({ inicio: ahora, fin: null });
+        await GMApi.actualizarPedido(p.id, { estatus: "En Proceso", segmentos });
+        await refrescarDashboard();
+      } catch (err) {
+        console.error("❌ Error reanudando pedido:", err);
+        alert("No se pudo reanudar el pedido.");
+      }
+    }
+
+    async function eliminarTodosDashboard() {
+      if (!confirm("¿Eliminar TODOS los pedidos? Esta acción no se puede deshacer.")) return;
+      const btn = document.getElementById("btn-eliminar-todos");
+      btn.disabled = true;
+      try {
+        for (const p of TODOS_PEDIDOS) {
+          await GMApi.eliminarPedido(p.id);
+        }
+        await refrescarDashboard();
+      } catch (err) {
+        console.error("❌ Error eliminando todos:", err);
+        alert("Ocurrió un error eliminando los pedidos. Intenta de nuevo.");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ─── Orquestador principal ──────────────────────────────────
+    async function refrescarDashboard() {
+      try {
+        TODOS_PEDIDOS = await cargarTodosPedidos();
+
+        const hoy  = calcularKPIsDelDia(TODOS_PEDIDOS, esHoy);
+        const ayer = calcularKPIsDelDia(TODOS_PEDIDOS, esAyer);
+
+        renderKPIs(hoy, ayer);
+        renderEstado(TODOS_PEDIDOS);
+        renderPorHora(TODOS_PEDIDOS);
+        renderTablaRecientes(TODOS_PEDIDOS);
+        renderRanking(TODOS_PEDIDOS);
+
+        if (hoy.totalPedidos > 0 && ayer.totalPedidos > 0) {
+          const pct = Math.round(((hoy.totalPedidos - ayer.totalPedidos) / ayer.totalPedidos) * 100);
+          document.getElementById("info-rendimiento").textContent =
+            pct >= 0 ? `Vas ${pct}% arriba en pedidos comparado con ayer.` : `Vas ${Math.abs(pct)}% abajo en pedidos comparado con ayer.`;
+        } else {
+          document.getElementById("info-rendimiento").textContent = "Aún no hay suficientes datos de ayer para comparar.";
+        }
+
+        document.getElementById("info-actualizado").textContent =
+          `Última actualización: ${new Date().toLocaleTimeString("es-DO", { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
+      } catch (err) {
+        console.error("❌ Error cargando el dashboard:", err.message);
+        document.getElementById("tabla-pedidos-recientes").innerHTML =
+          `<tr><td colspan="8" class="dash-cargando">No se pudieron cargar los datos. Intenta recargar la página.</td></tr>`;
+      }
+    }
+
+    // ─── Inicialización ──────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
+      // Guardia de sesión: el dashboard requiere estar logueado (mismo
+      // token que usa index.html). Si no hay sesión, se manda a login.
+      if (!GMApi.getToken() || !GMApi.getUsuario()) {
+        window.location.href = "index.html";
+        return;
+      }
+
       renderSaludo();
       renderPeriodo();
-      renderTablaRecientes();
-      renderRanking();
       actualizarRelojSidebar();
       setInterval(actualizarRelojSidebar, 1000);
 
-      crearSparkline("spark-pedidos",     [5,8,6,10,9,14,12,18], "#22C55E");
-      crearSparkline("spark-tiempo",      [12,10,11,9,10,8,9,7], "#3B82F6");
-      crearSparkline("spark-referencias", [40,45,42,50,48,55,52,58], "#F2845C");
-      crearSparkline("spark-bultos",      [10,14,9,16,12,18,15,20], "#A78BFA");
-      crearSparkline("spark-monto",       [15,18,17,22,20,26,24,28], "#22C55E");
-
-      crearDonutEstado();
-      crearChartPorHora();
+      refrescarDashboard();
+      // Refrescar datos automáticamente cada 60s (independiente del reloj)
+      setInterval(refrescarDashboard, 60 * 1000);
     });
   </script>
 </body>
