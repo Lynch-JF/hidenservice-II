@@ -129,6 +129,16 @@ const GMApi = {
   },
 
   /**
+   * PUT — Reemplazar recursos
+   */
+  put(path, body) {
+    return this.request(path, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    });
+  },
+
+  /**
    * DELETE — Eliminar recursos
    */
   del(path) {
@@ -258,6 +268,13 @@ const GMApi = {
   },
 
   /**
+   * PUT /api/historial/:id — actualizar un registro de historial
+   */
+  async actualizarHistorial(id, datos) {
+    return this.put(`/api/historial/${id}`, datos);
+  },
+
+  /**
    * ─── SACADORES ──────────────────────────────────────────
    */
 
@@ -326,28 +343,6 @@ const GMApi = {
       nota
     });
   },
-
-
-async actualizarHistorial(id, datos) {
-  const res = await fetch(`${API_URL}/api/historial/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${this.getToken()}`
-    },
-    body: JSON.stringify(datos)
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Error al actualizar el historial.");
-  }
-
-  return res.json();
-}
-
-
-  
 
   /**
    * PATCH /api/horas-extras/:id — activar/desactivar regla
