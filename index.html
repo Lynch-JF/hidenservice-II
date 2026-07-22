@@ -52,114 +52,259 @@
      CONTENIDO PRINCIPAL (oculto hasta autenticarse)
 ============================================================ -->
 <div class="main-container" id="main-app" style="display: none;">
+<div class="app-shell">
 
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <div class="navbar-logo">
+  <!-- ============================================================
+       SIDEBAR
+  ============================================================ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
       <img src="LOGO-Photoroom.png" alt="Logo" />
-      <span>Gestión de Pedidos</span>
+      <span>Gestión de<br>Pedidos</span>
     </div>
-    <ul class="navbar-links">
-      <li><a href="index.html" class="active">📦 Pedidos</a></li>
-      <li><a href="Reportes.html">📊 Reporte</a></li>
-      <li style="margin-left: auto;">
-        <button class="btn-logout" onclick="cerrarSesion()" title="Cerrar sesión">
-          👤 <span id="usuario-nombre">Usuario</span> | Salir
-        </button>
-      </li>
+
+    <ul class="sidebar-nav">
+      <li><a href="index.html" class="active">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span>Pedidos</span>
+      </a></li>
+      <li><a href="Reportes.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span>Reporte</span>
+      </a></li>
+      <li><a href="#">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Sacadores</span>
+      </a></li>
+      <li><a href="#">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Productos</span>
+      </a></li>
+      <li><a href="#">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Configuración</span>
+      </a></li>
     </ul>
-  </nav>
 
-  <h1>Lista de Pedidos</h1>
-
-  <!-- STATS BAR -->
-  <div class="stats-bar">
-    <div class="stat-pill activos">
-      <span class="stat-dot"></span>
-      <span class="stat-num" id="stat-activos">0</span>
-      <span class="stat-label">Activos</span>
+    <div class="sidebar-quick">
+      <div class="sidebar-quick-title">Atajos rápidos</div>
+      <button class="add" type="button" onclick="agregarPedido()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Agregar Pedido
+      </button>
+      <button class="pause" onclick="pausarTodos()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        Pausar Todos
+      </button>
+      <button class="star" onclick="reanudarTodos()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Reanudar Todos
+      </button>
+      <button class="btn-delete-all" onclick="eliminarTodos()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        Eliminar Todos
+      </button>
     </div>
-    <div class="stat-pill pausados">
-      <span class="stat-dot"></span>
-      <span class="stat-num" id="stat-pausados">0</span>
-      <span class="stat-label">Pausados</span>
-    </div>
-    <div class="stat-pill finalizados">
-      <span class="stat-dot"></span>
-      <span class="stat-num" id="stat-finalizados">0</span>
-      <span class="stat-label">Finalizados</span>
-    </div>
-  </div>
 
-  <!-- FORM CARD -->
-  <div class="form-card">
-    <input type="text" id="codigo" placeholder="Código del pedido" />
-    <select id="sacador">
-      <option value="">Selecciona el sacador</option>
-      <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
-      <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
-      <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
-      <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
-      <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
-      <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
-      <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
-      <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
-      <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
-      <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
-      <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
-      <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
-      <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
-      <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
-      <option value="Oscar De Jesús De La Cruz Reinoso">Oscar De Jesús De La Cruz Reinoso</option>
-    </select>
-    <div class="top-actions">
-      <input type="number" id="cantidad" placeholder="Cantidad total de productos" />
-      <button class="add" type="button" onclick="agregarPedido()">Agregar Pedido</button>
+    <div class="sidebar-clock">
+      <div class="sidebar-clock-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div>
+        <div class="sidebar-clock-label">Hora actual</div>
+        <div class="sidebar-clock-time" id="sidebar-clock-time">--:--:--</div>
+        <div class="sidebar-clock-date" id="sidebar-clock-date"></div>
+      </div>
     </div>
-    <button class="pause" onclick="pausarTodos()">Pausar Todos</button>
-    <button class="star"  onclick="reanudarTodos()">Reanudar Todos</button>
-    <button class="btn-delete-all" onclick="eliminarTodos()">
-      Eliminar todos
-    </button>
-  </div>
+  </aside>
 
-  <!-- FILTER BAR -->
-  <div class="filter-bar">
-    <input
-      type="text"
-      id="filtro-texto"
-      placeholder="🔍 Buscar por código..."
-      oninput="aplicarFiltro()"
-    />
-    <select id="filtro-sacador" onchange="aplicarFiltro()">
-      <option value="">Todos los sacadores</option>
-      <option value="omar marmolejos fajardo">Omar Marmolejos Fajardo</option>
-      <option value="jairo fernandez salcedo">Jairo Fernandez Salcedo</option>
-      <option value="ismael augusto veras lasuse">Ismael Augusto Veras Lasuse</option>
-      <option value="fernando antonio burgos cabrera">Fernando Antonio Burgos Cabrera</option>
-      <option value="juan de jesús peña pérez">Juan De Jesús Peña Pérez</option>
-      <option value="luis david nuñez santos">Luis David Nuñez Santos</option>
-      <option value="yustin alexander mendez">Yustin Alexander Mendez</option>
-      <option value="luis eduardo reyes">Luis Eduardo Reyes</option>
-      <option value="omelbe gomez valdez">Omelbe Gomez Valdez</option>
-      <option value="bryhan santo cordero">Bryhan Santo Cordero</option>
-      <option value="enrique nuñez brito">Enrique Nuñez Brito</option>
-      <option value="cirilo reynoso acevedo">Cirilo Reynoso Acevedo</option>
-      <option value="yan carlos cruz paulino">Yan Carlos Cruz Paulino</option>
-      <option value="wilkin ortega diaz">Wilkin Ortega Diaz</option>
-    </select>
-    <span class="filter-count" id="filter-count">0 pedidos</span>
-    <button class="btn-clear-filter" onclick="limpiarFiltro()">✕ Limpiar filtro</button>
-  </div>
+  <!-- ============================================================
+       CONTENIDO
+  ============================================================ -->
+  <div class="content-area">
 
-  <!-- TASK LIST -->
-  <div id="task-list">
-    <div class="empty-state" id="empty-state">
-      <div class="empty-state-icon">🔍</div>
-      <div>No hay pedidos que coincidan con el filtro.</div>
+    <!-- HEADER BAR -->
+    <header class="header-bar">
+      <div class="header-page">
+        <div class="header-page-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.91 8.84L8.56 21.19a1.93 1.93 0 0 1-2.72 0l-3.03-3a1.93 1.93 0 0 1 0-2.72L15.16 3.09a1.93 1.93 0 0 1 2.72 0l3.03 3a1.93 1.93 0 0 1 0 2.75z"></path><path d="M16 8L2 22"></path><path d="M17.5 15H9"></path></svg>
+        </div>
+        <span class="header-page-title">Gestión de Pedidos</span>
+      </div>
+
+      <div class="header-actions">
+        <a href="Reportes.html" class="header-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Reporte
+        </a>
+
+        <div class="user-menu" tabindex="0">
+          <button class="user-menu-trigger" type="button">
+            <span class="user-avatar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
+            <span class="user-info">
+              <span class="user-name" id="usuario-nombre">Usuario</span>
+              <span class="user-role">Administrador</span>
+            </span>
+            <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="user-menu-dropdown">
+            <button type="button" onclick="cerrarSesion()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE HEADING -->
+    <div class="page-heading">
+      <h1>Lista de Pedidos</h1>
+      <p>Administra y controla todos los pedidos en tiempo real</p>
     </div>
-  </div>
 
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+      <div class="stat-card activos">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Activos</span>
+          <span class="stat-card-num" id="stat-activos">0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+
+      <div class="stat-card pausados">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="9" x2="10" y2="15"></line><line x1="14" y1="9" x2="14" y2="15"></line></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Pausados</span>
+          <span class="stat-card-num" id="stat-pausados">0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+
+      <div class="stat-card finalizados">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 9 10.5 15.5 8 13"></polyline></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Finalizados</span>
+          <span class="stat-card-num" id="stat-finalizados">0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+
+      <div class="stat-card total">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Total pedidos hoy</span>
+          <span class="stat-card-num" id="stat-total">0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTERS CARD -->
+    <div class="filters-card">
+      <div class="filters-card-title">Filtros y acciones</div>
+      <div class="filters-grid">
+        <div class="field-group">
+          <label for="codigo">Código del pedido</label>
+          <input type="text" id="codigo" placeholder="Ej: PED-00123" />
+        </div>
+        <div class="field-group">
+          <label for="sacador">Selecciona el sacador</label>
+          <select id="sacador">
+            <option value="">Selecciona el sacador</option>
+            <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
+            <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
+            <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
+            <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
+            <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
+            <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
+            <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
+            <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
+            <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
+            <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
+            <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
+            <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
+            <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
+            <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
+            <option value="Oscar De Jesús De La Cruz Reinoso">Oscar De Jesús De La Cruz Reinoso</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="cantidad">Cantidad total de productos</label>
+          <input type="number" id="cantidad" placeholder="Ej: 15" />
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button class="add" type="button" onclick="agregarPedido()">+ Agregar Pedido</button>
+        <button class="pause" onclick="pausarTodos()">Pausar Todos</button>
+        <button class="star" onclick="reanudarTodos()">Reanudar Todos</button>
+        <button class="btn-delete-all" onclick="eliminarTodos()">Eliminar Todos</button>
+      </div>
+    </div>
+
+    <!-- LIST SECTION -->
+    <div class="list-section">
+      <div class="list-toolbar">
+        <input
+          type="text"
+          id="filtro-texto"
+          placeholder="🔍 Buscar por código..."
+          oninput="aplicarFiltro()"
+        />
+        <select id="filtro-sacador" onchange="aplicarFiltro()">
+          <option value="">Todos los sacadores</option>
+          <option value="omar marmolejos fajardo">Omar Marmolejos Fajardo</option>
+          <option value="jairo fernandez salcedo">Jairo Fernandez Salcedo</option>
+          <option value="ismael augusto veras lasuse">Ismael Augusto Veras Lasuse</option>
+          <option value="fernando antonio burgos cabrera">Fernando Antonio Burgos Cabrera</option>
+          <option value="juan de jesús peña pérez">Juan De Jesús Peña Pérez</option>
+          <option value="luis david nuñez santos">Luis David Nuñez Santos</option>
+          <option value="yustin alexander mendez">Yustin Alexander Mendez</option>
+          <option value="luis eduardo reyes">Luis Eduardo Reyes</option>
+          <option value="omelbe gomez valdez">Omelbe Gomez Valdez</option>
+          <option value="bryhan santo cordero">Bryhan Santo Cordero</option>
+          <option value="enrique nuñez brito">Enrique Nuñez Brito</option>
+          <option value="cirilo reynoso acevedo">Cirilo Reynoso Acevedo</option>
+          <option value="yan carlos cruz paulino">Yan Carlos Cruz Paulino</option>
+          <option value="wilkin ortega diaz">Wilkin Ortega Diaz</option>
+        </select>
+        <span class="filter-count" id="filter-count">0 pedidos</span>
+        <button class="btn-clear-filter" onclick="limpiarFiltro()">✕ Limpiar filtro</button>
+        <div class="list-toolbar-spacer"></div>
+        <div class="view-toggle" role="group" aria-label="Cambiar vista">
+          <button type="button" class="active" id="btn-view-grid" title="Vista de tarjetas" onclick="setVistaPedidos('grid')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </button>
+          <button type="button" id="btn-view-list" title="Vista de lista" onclick="setVistaPedidos('list')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- TASK LIST -->
+      <div id="task-list">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-state-icon">🔍</div>
+          <div>No hay pedidos que coincidan con el filtro.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+
+</div><!-- /app-shell -->
 </div><!-- /main-container -->
 
 <!-- ============================================================
