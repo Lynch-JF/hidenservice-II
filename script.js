@@ -1,5 +1,5 @@
 // ============================================================
-//  SCRIPT PRINCIPAL v2 — Dependencia 100% del Backend
+//  SCRIPT PRINCIPAL v2 — Dependencia 100% del Backend + Supabase
 //  Requiere gm-api.js cargado ANTES
 // ============================================================
 
@@ -9,7 +9,6 @@ let timers = {};
 let pausedTimers = {};
 
 const UMBRAL_EQUIPO = 100;
-const API_HOJA_HISTORIAL = "https://api.sheetbest.com/sheets/cce35084-ee62-4934-b2ed-eb5fcd2d414b";
 
 // ============================================================
 //  AUTENTICACIÓN
@@ -911,6 +910,10 @@ async function confirmarFinalizar() {
   const data = pedidosActivos[modalId];
   if (!data) return;
 
+  // 🔧 FIX: guardamos el id ANTES de cerrar el modal, porque cerrarModal()
+  // pone modalId = null y de lo contrario el PATCH se dispara con id "null".
+  const idPedido = modalId;
+
   cerrarModal();
 
   try {
@@ -947,7 +950,7 @@ async function confirmarFinalizar() {
 
     // Llamar al backend para finalizar
     const pedidoFinalizado = await GMApi.finalizarPedido(
-      modalId,
+      idPedido,
       cantidadSacada,
       bultos,
       montoTotal,
@@ -957,25 +960,25 @@ async function confirmarFinalizar() {
 
     // Actualizar estado local
     data.estatus = "Finalizado";
-    clearInterval(timers[modalId]);
+    clearInterval(timers[idPedido]);
 
     // Actualizar UI
-    const card = document.getElementById(`card-${modalId}`);
+    const card = document.getElementById(`card-${idPedido}`);
     if (card) card.classList.add("finalizado");
 
-    const endEl = document.getElementById(`end-${modalId}`);
+    const endEl = document.getElementById(`end-${idPedido}`);
     if (endEl) endEl.textContent = formatearFecha(ahora);
 
-    const timerEl = document.getElementById(`timer-${modalId}`);
+    const timerEl = document.getElementById(`timer-${idPedido}`);
     if (timerEl) timerEl.textContent = formatTime(Math.floor(data.elapsedMs / 1000));
 
-    const tppWrap = document.getElementById(`tpp-wrap-${modalId}`);
-    const tppEl = document.getElementById(`tpp-${modalId}`);
+    const tppWrap = document.getElementById(`tpp-wrap-${idPedido}`);
+    const tppEl = document.getElementById(`tpp-${idPedido}`);
     if (tppWrap) tppWrap.style.display = "block";
     if (tppEl) tppEl.textContent = cantidadSacada > 0 ? formatTime(Math.floor(data.elapsedMs / cantidadSacada / 1000)) : "—";
 
     // Remover botones de auxiliar
-    const teamSection = document.getElementById(`team-section-${modalId}`);
+    const teamSection = document.getElementById(`team-section-${idPedido}`);
     if (teamSection) {
       const btn = teamSection.querySelector(".btn-add-aux");
       if (btn) btn.remove();
