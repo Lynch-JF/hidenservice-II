@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Sujumi</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --rep-bg:          #0A0E14;
+      --rep-sidebar:     #0D1219;
+      --rep-card:        #131A24;
+      --rep-card-hover:  #171F2C;
+      --rep-border:      #202836;
+      --rep-border-soft: #1A222E;
+
+      --rep-text:        #E7ECF3;
+      --rep-text-light:  #8B96A8;
+      --rep-text-dim:    #5C6779;
+
+      --rep-primary:       #22C55E;
+      --rep-primary-dark:  #16A34A;
+      --rep-primary-soft:  rgba(34,197,94,0.12);
+
+      --rep-accent:       #F2845C;
+      --rep-accent-2:     #4FA3D1;
+      --rep-accent-blue:  #3B82F6;
+      --rep-accent-purple:#A78BFA;
+      --rep-accent-orange:#F59E0B;
+      --rep-accent-red:   #EF4444;
+
+      --rep-radius: 14px;
+      --rep-radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { background: var(--rep-bg); margin: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--rep-text); }
+    a { text-decoration: none; color: inherit; }
+    button { font-family: inherit; }
+
+    /* ── Shell ────────────────────────────────────────── */
+    .app-shell { display: flex; min-height: 100vh; background: var(--rep-bg); }
+
+    .app-sidebar {
+      width: 236px; flex-shrink: 0;
+      background: var(--rep-sidebar);
+      border-right: 1px solid var(--rep-border-soft);
+      display: flex; flex-direction: column;
+      padding: 22px 16px;
+      position: sticky; top: 0; height: 100vh;
+    }
+
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 22px; }
+    .sidebar-logo .logo-mark {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, #F2845C, #E84393 45%, #4FA3D1 75%, var(--rep-primary));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #fff; font-size: 0.95rem; flex-shrink: 0;
+    }
+    .sidebar-logo .logo-text { line-height: 1.1; }
+    .sidebar-logo .logo-text strong { display: block; font-size: 1.02rem; font-weight: 800; letter-spacing: 0.2px; }
+    .sidebar-logo .logo-text span { font-size: 0.62rem; color: var(--rep-text-dim); font-weight: 700; letter-spacing: 1.2px; }
+
+    .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 11px;
+      padding: 9px 12px; border-radius: var(--rep-radius-sm);
+      color: var(--rep-text-light); font-size: 0.9rem; font-weight: 600;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .sidebar-nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-nav a:hover { background: var(--rep-card-hover); color: var(--rep-text); }
+    .sidebar-nav a.activo { background: var(--rep-primary-soft); color: var(--rep-primary); }
+
+    .sidebar-spacer { flex: 1; }
+
+    .sidebar-hora-box {
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius-sm);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .sidebar-hora-box .hora-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.72rem; color: var(--rep-text-dim); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .sidebar-hora-box .hora-label svg { width: 13px; height: 13px; }
+    #sidebar-hora { display: block; font-size: 1.5rem; font-weight: 800; color: var(--rep-text); font-variant-numeric: tabular-nums; }
+    #sidebar-fecha { display: block; font-size: 0.76rem; color: var(--rep-text-light); margin-top: 2px; text-transform: capitalize; }
+
+    .sidebar-user-footer {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 8px;
+      border-top: 1px solid var(--rep-border-soft);
+      cursor: pointer;
+    }
+    .sidebar-user-footer .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--rep-primary-soft); color: var(--rep-primary);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem; flex-shrink: 0;
+    }
+    .sidebar-user-footer .user-meta { line-height: 1.2; flex: 1; }
+    .sidebar-user-footer .user-meta strong { display: block; font-size: 0.84rem; font-weight: 700; }
+    .sidebar-user-footer .user-meta span { font-size: 0.72rem; color: var(--rep-text-light); }
+    .sidebar-user-footer svg { width: 14px; height: 14px; color: var(--rep-text-dim); }
+
+    /* ── Contenido ────────────────────────────────────── */
+    .app-content { flex: 1; min-width: 0; }
+
+    .app-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 22px 34px;
+      border-bottom: 1px solid var(--rep-border-soft);
+      flex-wrap: wrap;
+    }
+    .app-topbar-title h1 { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--rep-text); }
+    .app-topbar-title p { margin: 4px 0 0; font-size: 0.85rem; color: var(--rep-text-light); }
+
+    .app-topbar-right { display: flex; align-items: center; gap: 14px; }
+
+    .btn-pill-link {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--rep-card); border: 1px solid var(--rep-border);
+      color: var(--rep-text); padding: 9px 18px; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 700;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn-pill-link svg { width: 15px; height: 15px; color: var(--rep-primary); }
+    .btn-pill-link:hover { background: var(--rep-card-hover); border-color: var(--rep-primary); }
+
+    .btn-bell {
+      position: relative;
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--rep-card); border: 1px solid var(--rep-border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--rep-text-light); cursor: pointer;
+    }
+    .btn-bell svg { width: 17px; height: 17px; }
+    .btn-bell .badge-count {
+      position: absolute; top: -4px; right: -4px;
+      background: var(--rep-accent-red); color: #fff;
+      font-size: 0.65rem; font-weight: 800;
+      width: 17px; height: 17px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--rep-bg);
+    }
+
+    .app-topbar-user {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--rep-card); border: 1px solid var(--rep-border);
+      border-radius: 999px; padding: 6px 14px 6px 6px; cursor: pointer;
+    }
+    .app-topbar-user .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--rep-primary-soft); color: var(--rep-primary);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem;
+    }
+    .app-topbar-user .user-meta { line-height: 1.2; }
+    .app-topbar-user .user-meta strong { display: block; font-size: 0.84rem; font-weight: 700; }
+    .app-topbar-user .user-meta span { font-size: 0.72rem; color: var(--rep-text-light); }
+    .app-topbar-user svg { width: 14px; height: 14px; color: var(--rep-text-dim); margin-left: 2px; }
+
+    /* ── Dashboard main ───────────────────────────────── */
+    .dash-main { max-width: 1360px; margin: 0 auto; padding: 26px 34px 50px; }
+
+    .dash-card {
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius);
+      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+    }
+
+    .dash-card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 18px 20px 4px;
+    }
+    .dash-card-head h3 { margin: 0; font-size: 0.98rem; font-weight: 800; color: var(--rep-text); }
+    .dash-card-head a { font-size: 0.8rem; font-weight: 700; color: var(--rep-primary); }
+
+    .dash-dropdown {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--rep-bg); border: 1px solid var(--rep-border);
+      border-radius: 999px; padding: 6px 12px;
+      font-size: 0.78rem; font-weight: 700; color: var(--rep-text);
+    }
+    .dash-dropdown svg { width: 13px; height: 13px; color: var(--rep-text-dim); }
+
+    /* KPIs */
+    .dash-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
+    .dash-kpi {
+      background: var(--rep-card); border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius); padding: 18px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .dash-kpi:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+    .dash-kpi .kpi-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dash-kpi .kpi-icon svg { width: 21px; height: 21px; }
+    .dash-kpi.kpi-verde  .kpi-icon { background: rgba(34,197,94,0.14);  color: var(--rep-primary); }
+    .dash-kpi.kpi-azul   .kpi-icon { background: rgba(59,130,246,0.14); color: var(--rep-accent-blue); }
+    .dash-kpi.kpi-naranja.kpi-icon,
+    .dash-kpi.kpi-naranja .kpi-icon { background: rgba(242,132,92,0.14); color: var(--rep-accent); }
+    .dash-kpi.kpi-morado .kpi-icon { background: rgba(167,139,250,0.14);color: var(--rep-accent-purple); }
+
+    .dash-kpi .kpi-body { flex: 1; min-width: 0; }
+    .dash-kpi .kpi-label { font-size: 0.78rem; color: var(--rep-text-light); font-weight: 600; margin-bottom: 2px; }
+    .dash-kpi .kpi-valor { font-size: 1.5rem; font-weight: 800; color: var(--rep-text); line-height: 1.15; }
+    .dash-kpi .kpi-trend { font-size: 0.74rem; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 3px; }
+    .dash-kpi .kpi-trend.sube { color: #4ADE80; }
+    .dash-kpi .kpi-trend.baja { color: #F87171; }
+    .dash-kpi .kpi-spark { width: 70px; height: 34px; flex-shrink: 0; }
+
+    /* Row 2 */
+    .dash-row-2 { display: grid; grid-template-columns: 1.1fr 1.6fr 1fr; gap: 18px; margin-bottom: 18px; }
+    @media (max-width: 1180px) { .dash-row-2 { grid-template-columns: 1fr; } }
+
+    .dash-donut-wrap { display: flex; align-items: center; gap: 18px; padding: 10px 20px 20px; }
+    .dash-donut-chart { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
+    .dash-donut-center {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none;
+    }
+    .dash-donut-center strong { font-size: 1.5rem; font-weight: 800; color: var(--rep-text); line-height: 1; }
+    .dash-donut-center span { font-size: 0.72rem; color: var(--rep-text-light); margin-top: 2px; }
+
+    .dash-donut-legend { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .dash-donut-legend .leg-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+    .dash-donut-legend .leg-label { display: flex; align-items: center; gap: 8px; color: var(--rep-text); font-weight: 600; }
+    .dash-donut-legend .leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .dash-donut-legend .leg-val { font-weight: 700; color: var(--rep-text-light); font-size: 0.82rem; }
+
+    .dash-hora-wrap { padding: 10px 20px 20px; height: 260px; }
+
+    .dash-acciones { padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .accion-btn {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--rep-bg); border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius-sm); padding: 11px 14px;
+      cursor: pointer; text-align: left; width: 100%;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .accion-btn:hover { background: var(--rep-card-hover); }
+    .accion-btn .icon-wrap {
+      width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .accion-btn .icon-wrap svg { width: 16px; height: 16px; }
+    .accion-btn.accion-verde .icon-wrap  { background: rgba(34,197,94,0.16);  color: var(--rep-primary); }
+    .accion-btn.accion-naranja .icon-wrap{ background: rgba(242,132,92,0.16); color: var(--rep-accent); }
+    .accion-btn.accion-azul .icon-wrap   { background: rgba(59,130,246,0.16); color: var(--rep-accent-blue); }
+    .accion-btn.accion-roja .icon-wrap   { background: rgba(239,68,68,0.16);  color: var(--rep-accent-red); }
+    .accion-btn .accion-texto { flex: 1; min-width: 0; }
+    .accion-btn .accion-texto strong { display: block; font-size: 0.86rem; font-weight: 700; color: var(--rep-text); }
+    .accion-btn.accion-roja .accion-texto strong { color: #F87171; }
+    .accion-btn .accion-texto span { display: block; font-size: 0.74rem; color: var(--rep-text-light); margin-top: 1px; }
+    .accion-btn > svg.chevron { width: 15px; height: 15px; color: var(--rep-text-dim); flex-shrink: 0; }
+
+    /* Row 3 */
+    .dash-row-3 { display: grid; grid-template-columns: 1.7fr 1fr; gap: 18px; margin-bottom: 18px; }
+    @media (max-width: 1180px) { .dash-row-3 { grid-template-columns: 1fr; } }
+
+    .dash-tabla-wrap { padding: 6px 20px 18px; overflow-x: auto; }
+    table.dash-tabla { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 640px; }
+    table.dash-tabla thead th {
+      text-align: left; padding: 10px 8px; color: var(--rep-text-dim);
+      font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--rep-border);
+    }
+    table.dash-tabla td { padding: 10px 8px; border-bottom: 1px solid var(--rep-border-soft); color: var(--rep-text); vertical-align: middle; }
+    table.dash-tabla tbody tr:hover { background: var(--rep-card-hover); }
+
+    .sacador-cell { display: flex; align-items: center; gap: 8px; }
+    .sacador-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--rep-primary-soft); color: var(--rep-primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 800; flex-shrink: 0;
+    }
+
+    .estado-badge {
+      display: inline-flex; padding: 4px 11px; border-radius: 999px;
+      font-size: 0.74rem; font-weight: 700;
+    }
+    .estado-badge.activo     { background: rgba(34,197,94,0.16);  color: #4ADE80; }
+    .estado-badge.pausado    { background: rgba(242,132,92,0.16); color: #F2845C; }
+    .estado-badge.finalizado { background: rgba(148,163,184,0.14);color: var(--rep-text-light); }
+
+    .btn-tabla-accion {
+      width: 30px; height: 30px; border-radius: 8px; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-tabla-accion svg { width: 14px; height: 14px; }
+    .btn-tabla-accion.ver   { background: rgba(34,197,94,0.16); color: var(--rep-primary); }
+    .btn-tabla-accion.play  { background: var(--rep-primary); color: #06210F; }
+
+    .dash-tabla-footer { text-align: center; padding-top: 10px; }
+    .dash-tabla-footer a { font-size: 0.82rem; font-weight: 700; color: var(--rep-primary); }
+
+    .dash-ranking { padding: 6px 20px 18px; display: flex; flex-direction: column; gap: 16px; }
+    .rank-row { display: flex; align-items: center; gap: 12px; }
+    .rank-nombre { font-size: 0.84rem; font-weight: 700; color: var(--rep-text); width: 78px; flex-shrink: 0; }
+    .rank-bar-track { flex: 1; height: 9px; border-radius: 999px; background: var(--rep-border); overflow: hidden; }
+    .rank-bar-fill { height: 100%; border-radius: 999px; }
+    .rank-valor { font-size: 0.82rem; font-weight: 800; color: var(--rep-text); width: 26px; text-align: right; flex-shrink: 0; }
+
+    /* Info strip */
+    .dash-info-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    @media (max-width: 980px) { .dash-info-strip { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 620px) { .dash-info-strip { grid-template-columns: 1fr; } }
+
+    .dash-info-item {
+      background: var(--rep-card); border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius); padding: 18px;
+    }
+    .dash-info-item .icon-wrap {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    }
+    .dash-info-item .icon-wrap svg { width: 17px; height: 17px; }
+    .dash-info-item:nth-child(1) .icon-wrap { background: rgba(34,197,94,0.14);  color: var(--rep-primary); }
+    .dash-info-item:nth-child(2) .icon-wrap { background: rgba(167,139,250,0.14);color: var(--rep-accent-purple); }
+    .dash-info-item:nth-child(3) .icon-wrap { background: rgba(242,132,92,0.14); color: var(--rep-accent); }
+    .dash-info-item:nth-child(4) .icon-wrap { background: rgba(59,130,246,0.14); color: var(--rep-accent-blue); }
+    .dash-info-item h5 { margin: 0 0 4px; font-size: 0.86rem; font-weight: 800; color: var(--rep-text); }
+    .dash-info-item p { margin: 0; font-size: 0.78rem; color: var(--rep-text-light); line-height: 1.4; }
+    .dash-info-item .meta-progress { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+    .dash-info-item .meta-track { flex: 1; height: 7px; border-radius: 999px; background: var(--rep-border); overflow: hidden; }
+    .dash-info-item .meta-fill { height: 100%; border-radius: 999px; background: var(--rep-accent); }
+    .dash-info-item .meta-pct { font-size: 0.78rem; font-weight: 800; color: var(--rep-text); }
+
+    /* Actividad reciente (usado si se agrega) */
+    .actividad-lista { display: flex; flex-direction: column; gap: 14px; padding: 6px 20px 18px; }
+    .actividad-item { display: flex; align-items: flex-start; gap: 11px; }
+    .actividad-item .icon-wrap {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .actividad-item .icon-wrap svg { width: 14px; height: 14px; }
+    .actividad-item.act-verde .icon-wrap  { background: rgba(34,197,94,0.16);  color: var(--rep-primary); }
+    .actividad-item.act-naranja .icon-wrap{ background: rgba(242,132,92,0.16); color: var(--rep-accent); }
+    .actividad-item.act-azul .icon-wrap   { background: rgba(59,130,246,0.16); color: var(--rep-accent-blue); }
+    .actividad-item .act-texto { flex: 1; min-width: 0; }
+    .actividad-item .act-texto strong { display: block; font-size: 0.82rem; font-weight: 700; color: var(--rep-text); }
+    .actividad-item .act-texto span.act-sub { display: block; font-size: 0.76rem; color: var(--rep-text-light); }
+    .actividad-item .act-tiempo { font-size: 0.72rem; color: var(--rep-text-dim); white-space: nowrap; flex-shrink: 0; }
+
+    @media (max-width: 1300px) { .dash-kpis { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 900px)  { .dash-kpis { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px) {
+      .app-sidebar { display: none; }
+      .app-topbar { padding: 16px 18px; }
+      .dash-main { padding: 20px 18px 40px; }
+      .dash-kpi { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ══════════ SIDEBAR ══════════ -->
+    <aside class="app-sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">S</div>
+        <div class="logo-text">
+          <strong>sujumi</strong>
+          <span>SUPERMERCADOS</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="activo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
+          Dashboard
+        </a>
+        <a href="index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"/></svg>
+          Pedidos
+        </a>
+        <a href="sacadores.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.4"/><path d="M23 20v-1a4 4 0 0 0-3-3.87"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/></svg>
+          Sacadores
+        </a>
+        <a href="productos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+          Productos
+        </a>
+        <a href="Reportes.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+          Reportes
+        </a>
+        <a href="horas-extras.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Horas Extras
+        </a>
+        <a href="configuracion.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"/></svg>
+          Configuración
+        </a>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-hora-box">
+        <div class="hora-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Hora actual
+        </div>
+        <span id="sidebar-hora">—</span>
+        <span id="sidebar-fecha">—</span>
+      </div>
+
+      <div class="sidebar-user-footer">
+        <div class="avatar">JF</div>
+        <div class="user-meta">
+          <strong>Juan Francisco</strong>
+          <span>Administrador</span>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+    </aside>
+
+    <!-- ══════════ CONTENIDO ══════════ -->
+    <div class="app-content">
+
+      <header class="app-topbar">
+        <div class="app-topbar-title">
+          <h1 id="saludo-titulo">¡Bienvenido! 👋</h1>
+          <p>Aquí tienes un resumen general de la gestión de pedidos.</p>
+        </div>
+
+        <div class="app-topbar-right">
+          <a href="Reportes.html" class="btn-pill-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+            Reportes
+          </a>
+          <div class="btn-bell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="badge-count">3</span>
+          </div>
+          <div class="app-topbar-user">
+            <div class="avatar">JF</div>
+            <div class="user-meta">
+              <strong>Juan Francisco Jimenez</strong>
+              <span>Administrador</span>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+      </header>
+
+      <main class="dash-main">
+
+        <!-- KPIs -->
+        <div class="dash-kpis">
+          <div class="dash-kpi kpi-verde">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="m9 13 2 2 4-4"/></svg>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Total de Pedidos</div>
+              <div class="kpi-valor">128</div>
+              <div class="kpi-trend sube">↑ 18% vs. ayer</div>
+            </div>
+            <canvas class="dash-kpi-spark" id="spark-pedidos"></canvas>
+          </div>
+
+          <div class="dash-kpi kpi-azul">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Tiempo prom. por Artículo</div>
+              <div class="kpi-valor">02:35</div>
+              <div class="kpi-trend baja">↓ 8% vs. ayer</div>
+            </div>
+            <canvas class="dash-kpi-spark" id="spark-tiempo"></canvas>
+          </div>
+
+          <div class="dash-kpi kpi-naranja">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Total de Referencias</div>
+              <div class="kpi-valor">256</div>
+              <div class="kpi-trend sube">↑ 12% vs. ayer</div>
+            </div>
+            <canvas class="dash-kpi-spark" id="spark-referencias"></canvas>
+          </div>
+
+          <div class="dash-kpi kpi-morado">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Total de Bultos</div>
+              <div class="kpi-valor">42</div>
+              <div class="kpi-trend sube">↑ 5% vs. ayer</div>
+            </div>
+            <canvas class="dash-kpi-spark" id="spark-bultos"></canvas>
+          </div>
+
+          <div class="dash-kpi kpi-verde">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Monto Total</div>
+              <div class="kpi-valor">$25,840</div>
+              <div class="kpi-trend sube">↑ 22% vs. ayer</div>
+            </div>
+            <canvas class="dash-kpi-spark" id="spark-monto"></canvas>
+          </div>
+        </div>
+
+        <!-- Row 2: Estado / Por hora / Acciones -->
+        <div class="dash-row-2">
+          <div class="dash-card">
+            <div class="dash-card-head">
+              <h3>Pedidos por estado</h3>
+              <div class="dash-dropdown">Hoy
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="dash-donut-wrap">
+              <div class="dash-donut-chart">
+                <canvas id="donut-estado"></canvas>
+                <div class="dash-donut-center"><strong>128</strong><span>Total</span></div>
+              </div>
+              <div class="dash-donut-legend">
+                <div class="leg-row">
+                  <span class="leg-label"><span class="leg-dot" style="background:#22C55E"></span>Activos</span>
+                  <span class="leg-val">78 (61%)</span>
+                </div>
+                <div class="leg-row">
+                  <span class="leg-label"><span class="leg-dot" style="background:#3B82F6"></span>Pausados</span>
+                  <span class="leg-val">24 (19%)</span>
+                </div>
+                <div class="leg-row">
+                  <span class="leg-label"><span class="leg-dot" style="background:#F2845C"></span>Finalizados</span>
+                  <span class="leg-val">26 (20%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-card">
+            <div class="dash-card-head">
+              <h3>Pedidos por hora</h3>
+              <div class="dash-dropdown">Hoy
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="dash-hora-wrap">
+              <canvas id="chart-por-hora"></canvas>
+            </div>
+          </div>
+
+          <div class="dash-card">
+            <div class="dash-card-head">
+              <h3>Acciones rápidas</h3>
+            </div>
+            <div class="dash-acciones">
+              <button class="accion-btn accion-verde">
+                <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/></svg></span>
+                <span class="accion-texto"><strong>Agregar Pedido</strong><span>Crear un nuevo pedido</span></span>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <button class="accion-btn accion-naranja">
+                <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg></span>
+                <span class="accion-texto"><strong>Pausar Todos</strong><span>Pausar todos los pedidos activos</span></span>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <button class="accion-btn accion-azul">
+                <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></span>
+                <span class="accion-texto"><strong>Reanudar Todos</strong><span>Reanudar todos los pedidos</span></span>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <button class="accion-btn accion-roja">
+                <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg></span>
+                <span class="accion-texto"><strong>Eliminar Todos</strong><span>Eliminar todos los pedidos</span></span>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Pedidos recientes / Top sacadores -->
+        <div class="dash-row-3">
+          <div class="dash-card">
+            <div class="dash-card-head">
+              <h3>Pedidos recientes</h3>
+              <a href="index.html">Ver todos →</a>
+            </div>
+            <div class="dash-tabla-wrap">
+              <table class="dash-tabla">
+                <thead>
+                  <tr>
+                    <th>Código</th><th>Sacador</th><th>Estado</th><th>Productos</th>
+                    <th>Inicio</th><th>Fin estimado</th><th>Tiempo restante</th><th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-pedidos-recientes"></tbody>
+              </table>
+            </div>
+            <div class="dash-tabla-footer"><a href="index.html">Ver todos los pedidos →</a></div>
+          </div>
+
+          <div class="dash-card">
+            <div class="dash-card-head">
+              <h3>Pedidos por sacador (Top 5)</h3>
+              <div class="dash-dropdown">Hoy
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="dash-ranking" id="ranking-sacadores"></div>
+            <div class="dash-tabla-footer"><a href="Reportes.html">Ver ranking completo →</a></div>
+          </div>
+        </div>
+
+        <!-- Franja informativa -->
+        <div class="dash-info-strip">
+          <div class="dash-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </div>
+            <h5>Actualización en tiempo real</h5>
+            <p>Los datos se actualizan automáticamente cada 5 minutos.</p>
+          </div>
+          <div class="dash-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 4h3a2 2 0 0 1-2 2h-1"/><path d="M7 4H4a2 2 0 0 0 2 2h1"/></svg>
+            </div>
+            <h5>Rendimiento del día</h5>
+            <p>Vas 18% arriba en pedidos completados comparado con ayer.</p>
+          </div>
+          <div class="dash-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3"/></svg>
+            </div>
+            <h5>Meta del día</h5>
+            <p>128 / 150 pedidos completados</p>
+            <div class="meta-progress">
+              <div class="meta-track"><div class="meta-fill" style="width:85%"></div></div>
+              <span class="meta-pct">85%</span>
+            </div>
+          </div>
+          <div class="dash-info-item">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M3 10h18"/></svg>
+            </div>
+            <h5>Período actual</h5>
+            <p id="periodo-actual">—</p>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // ─── Datos de muestra (placeholder — conectar a Supabase/SheetBest) ───
+    const DATOS_RECIENTES = [
+      { codigo:"PED-00128", sacador:"Carlos M.", estado:"activo",     productos:18, inicio:"10:15 a.m.", fin:"11:15 a.m.", restante:"00:32:45", accion:"ver"  },
+      { codigo:"PED-00127", sacador:"Ana G.",    estado:"pausado",    productos:12, inicio:"09:45 a.m.", fin:"10:45 a.m.", restante:"Pausado",  accion:"play" },
+      { codigo:"PED-00126", sacador:"Luis R.",   estado:"activo",     productos:25, inicio:"10:30 a.m.", fin:"11:30 a.m.", restante:"00:47:12", accion:"ver"  },
+      { codigo:"PED-00125", sacador:"María S.",  estado:"finalizado", productos:8,  inicio:"09:20 a.m.", fin:"10:20 a.m.", restante:"—",         accion:"ver"  },
+      { codigo:"PED-00124", sacador:"Pedro L.",  estado:"pausado",    productos:30, inicio:"08:00 a.m.", fin:"08:45 a.m.", restante:"Pausado",  accion:"play" }
+    ];
+
+    const RANKING_SACADORES = [
+      { nombre:"Carlos M.", valor:28, color:"#22C55E" },
+      { nombre:"Ana G.",    valor:22, color:"#F2845C" },
+      { nombre:"Luis R.",   valor:18, color:"#3B82F6" },
+      { nombre:"María S.",  valor:15, color:"#A78BFA" },
+      { nombre:"Pedro L.",  valor:12, color:"#4FA3D1" }
+    ];
+
+    function iniciales(nombre) {
+      return nombre.split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase();
+    }
+
+    function renderTablaRecientes() {
+      const tbody = document.getElementById("tabla-pedidos-recientes");
+      tbody.innerHTML = DATOS_RECIENTES.map(p => {
+        const estadoTxt = p.estado === "activo" ? "Activo" : p.estado === "pausado" ? "Pausado" : "Finalizado";
+        const restanteHtml = p.restante === "Pausado"
+          ? `<span class="estado-badge pausado">Pausado</span>`
+          : p.restante;
+        const btn = p.accion === "ver"
+          ? `<button class="btn-tabla-accion ver" title="Ver"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>`
+          : `<button class="btn-tabla-accion play" title="Reanudar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></button>`;
+        return `<tr>
+          <td>${p.codigo}</td>
+          <td><div class="sacador-cell"><span class="sacador-avatar">${iniciales(p.sacador)}</span>${p.sacador}</div></td>
+          <td><span class="estado-badge ${p.estado}">${estadoTxt}</span></td>
+          <td>${p.productos} productos</td>
+          <td>${p.inicio}</td>
+          <td>${p.fin}</td>
+          <td>${restanteHtml}</td>
+          <td>${btn}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderRanking() {
+      const wrap = document.getElementById("ranking-sacadores");
+      const max = Math.max(...RANKING_SACADORES.map(r => r.valor));
+      wrap.innerHTML = RANKING_SACADORES.map(r => `
+        <div class="rank-row">
+          <span class="rank-nombre">${r.nombre}</span>
+          <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${Math.round((r.valor/max)*100)}%; background:${r.color}"></div></div>
+          <span class="rank-valor">${r.valor}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderSaludo() {
+      const nombre = "Juan Francisco";
+      const h = new Date().getHours();
+      const momento = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+      document.getElementById("saludo-titulo").textContent = `${momento}, ${nombre}! 👋`;
+    }
+
+    function renderPeriodo() {
+      const ahora = new Date();
+      const fechaStr = ahora.toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric" });
+      document.getElementById("periodo-actual").textContent = `${fechaStr} · 06:00 a.m. – 11:59 p.m.`;
+    }
+
+    function actualizarRelojSidebar() {
+      const ahora = new Date();
+      document.getElementById("sidebar-hora").textContent = ahora.toLocaleTimeString("es-DO", { hour12: false });
+      document.getElementById("sidebar-fecha").textContent = ahora.toLocaleDateString("es-DO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+
+    // ─── Gráficas ───────────────────────────────────────
+    function crearSparkline(id, data, color) {
+      const ctx = document.getElementById(id).getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.map((_, i) => i),
+          datasets: [{
+            data, borderColor: color, borderWidth: 2, pointRadius: 0,
+            tension: 0.4, fill: true,
+            backgroundColor: (ctxb) => {
+              const g = ctxb.chart.ctx.createLinearGradient(0, 0, 0, 34);
+              g.addColorStop(0, color + "55");
+              g.addColorStop(1, color + "00");
+              return g;
+            }
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false } },
+          elements: { line: { borderJoinStyle: "round" } }
+        }
+      });
+    }
+
+    function crearDonutEstado() {
+      const ctx = document.getElementById("donut-estado").getContext("2d");
+      new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["Activos", "Pausados", "Finalizados"],
+          datasets: [{
+            data: [78, 24, 26],
+            backgroundColor: ["#22C55E", "#3B82F6", "#F2845C"],
+            borderColor: "#131A24", borderWidth: 3, hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: "72%",
+          plugins: { legend: { display: false }, tooltip: { enabled: true } }
+        }
+      });
+    }
+
+    function crearChartPorHora() {
+      const horas = ["06:00","07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
+      const valores = [3,7,12,18,24,32,42,38,30,26,22,20,17,10,4];
+      const ctx = document.getElementById("chart-por-hora").getContext("2d");
+      const gridColor = "rgba(148,163,184,0.08)";
+      const tickColor = "#8B96A8";
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: horas,
+          datasets: [{
+            label: "Pedidos", data: valores,
+            borderColor: "#22C55E", borderWidth: 2.5, pointRadius: 3,
+            pointBackgroundColor: "#22C55E", pointBorderColor: "#0A0E14", pointBorderWidth: 1.5,
+            tension: 0.4, fill: true,
+            backgroundColor: (ctxb) => {
+              const g = ctxb.chart.ctx.createLinearGradient(0, 0, 0, 240);
+              g.addColorStop(0, "rgba(34,197,94,0.28)");
+              g.addColorStop(1, "rgba(34,197,94,0)");
+              return g;
+            }
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#171F2C", borderColor: "#22C55E", borderWidth: 1,
+              titleColor: "#E7ECF3", bodyColor: "#E7ECF3", padding: 10,
+              callbacks: { label: (c) => `${c.parsed.y} pedidos` }
+            }
+          },
+          scales: {
+            x: { ticks: { color: tickColor, font: { size: 10 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: tickColor, font: { size: 10 } }, grid: { color: gridColor } }
+          }
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderSaludo();
+      renderPeriodo();
+      renderTablaRecientes();
+      renderRanking();
+      actualizarRelojSidebar();
+      setInterval(actualizarRelojSidebar, 1000);
+
+      crearSparkline("spark-pedidos",     [5,8,6,10,9,14,12,18], "#22C55E");
+      crearSparkline("spark-tiempo",      [12,10,11,9,10,8,9,7], "#3B82F6");
+      crearSparkline("spark-referencias", [40,45,42,50,48,55,52,58], "#F2845C");
+      crearSparkline("spark-bultos",      [10,14,9,16,12,18,15,20], "#A78BFA");
+      crearSparkline("spark-monto",       [15,18,17,22,20,26,24,28], "#22C55E");
+
+      crearDonutEstado();
+      crearChartPorHora();
+    });
+  </script>
+</body>
+</html>
