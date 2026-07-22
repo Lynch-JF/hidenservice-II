@@ -327,6 +327,28 @@ const GMApi = {
     });
   },
 
+
+async actualizarHistorial(id, datos) {
+  const res = await fetch(`${API_URL}/api/historial/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${this.getToken()}`
+    },
+    body: JSON.stringify(datos)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al actualizar el historial.");
+  }
+
+  return res.json();
+}
+
+
+  
+
   /**
    * PATCH /api/horas-extras/:id — activar/desactivar regla
    */
