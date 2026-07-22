@@ -352,6 +352,49 @@ const GMApi = {
   },
 
   /**
+   * ─── USUARIOS ───────────────────────────────────────────
+   */
+
+  /**
+   * GET /api/usuarios — obtener lista de usuarios (solo admin)
+   */
+  async obtenerUsuarios() {
+    const data = await this.get("/api/usuarios");
+    return data.usuarios;
+  },
+
+  /**
+   * GET /api/usuarios/:id — obtener un usuario específico
+   */
+  async obtenerUsuario(id) {
+    const data = await this.get(`/api/usuarios/${id}`);
+    return data.usuario;
+  },
+
+  /**
+   * POST /api/usuarios — crear un nuevo usuario
+   */
+  async crearUsuario(nombre, email, password, rol = "operador") {
+    const data = await this.post("/api/usuarios", { nombre, email, password, rol });
+    return data.usuario;
+  },
+
+  /**
+   * PATCH /api/usuarios/:id — actualizar usuario (nombre, email, rol, activo, password opcional)
+   */
+  async actualizarUsuario(id, updates) {
+    const data = await this.patch(`/api/usuarios/${id}`, updates);
+    return data.usuario;
+  },
+
+  /**
+   * DELETE /api/usuarios/:id — eliminar usuario
+   */
+  async eliminarUsuario(id) {
+    return this.del(`/api/usuarios/${id}`);
+  },
+
+  /**
    * DELETE /api/horas-extras/:id — eliminar regla
    */
   async eliminarHoraExtra(id) {
