@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Historial — Gestión de pedidos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+
+<!-- ============================================================
+     MODAL DE LOGIN — Bloqueado hasta autenticarse
+============================================================ -->
+<div class="modal-overlay" id="modal-login-overlay">
+  <div class="modal modal-login" id="modal-login">
+    <div class="login-header">
+      <img src="LOGO-Photoroom.png" alt="Logo" class="login-logo" />
+      <h2>Gestión de Pedidos</h2>
+      <p>Inicia sesión para continuar</p>
+    </div>
+
+    <div class="login-body">
+      <div class="modal-field">
+        <label for="login-email">📧 Email</label>
+        <input type="email" id="login-email" placeholder="tu@email.com" />
+      </div>
+      <div class="modal-field">
+        <label for="login-password">🔒 Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••" />
+      </div>
+      <p class="modal-hint error-msg" id="login-error" style="margin-top: 8px;"></p>
+      <p class="modal-hint" id="login-loading" style="color: var(--text-muted); text-align: center; display: none;">
+        Validando credenciales...
+      </p>
+    </div>
+
+    <div class="login-footer">
+      <button class="modal-btn primary" id="btn-login" onclick="autenticarHistorial()" style="width: 100%;">
+        🔓 Iniciar sesión
+      </button>
+    </div>
+
+    <div class="login-footer-info">
+      <small>🔐 Tu sesión se mantendrá segura. Cerrar la sesión eliminará tu token.</small>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     CONTENIDO PRINCIPAL (oculto hasta autenticarse)
+============================================================ -->
+<div class="main-container" id="main-app" style="display: none;">
+<div class="app-shell">
+
+  <!-- ============================================================
+       SIDEBAR
+  ============================================================ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="LOGO-Photoroom.png" alt="Logo" />
+      <span>Gestión de<br>Pedidos</span>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="index.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span>Pedidos</span>
+      </a></li>
+      <li><a href="Reportes.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span>Reporte</span>
+      </a></li>
+      <li><a href="Historial.html" class="active">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Historial</span>
+      </a></li>
+      <li><a href="Sacadores.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Sacadores</span>
+      </a></li>
+      <li><a href="#">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Productos</span>
+      </a></li>
+      <li><a href="#">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Configuración</span>
+      </a></li>
+    </ul>
+
+    <div class="sidebar-clock">
+      <div class="sidebar-clock-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div>
+        <div class="sidebar-clock-label">Hora actual</div>
+        <div class="sidebar-clock-time" id="sidebar-clock-time">--:--:--</div>
+        <div class="sidebar-clock-date" id="sidebar-clock-date"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       CONTENIDO
+  ============================================================ -->
+  <div class="content-area">
+
+    <!-- HEADER BAR -->
+    <header class="header-bar">
+      <div class="header-page">
+        <div class="header-page-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </div>
+        <span class="header-page-title">Historial de Pedidos</span>
+      </div>
+
+      <div class="header-actions">
+        <a href="index.html" class="header-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+          Pedidos
+        </a>
+
+        <div class="user-menu" tabindex="0">
+          <button class="user-menu-trigger" type="button">
+            <span class="user-avatar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
+            <span class="user-info">
+              <span class="user-name" id="usuario-nombre">Usuario</span>
+              <span class="user-role">Administrador</span>
+            </span>
+            <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="user-menu-dropdown">
+            <button type="button" onclick="cerrarSesionHistorial()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE HEADING -->
+    <div class="page-heading">
+      <h1>Historial de Pedidos</h1>
+      <p>Pedidos finalizados — filtra por fecha y sacador</p>
+    </div>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Registros</span>
+          <span class="stat-card-num" id="stat-hist-registros">0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+
+      <div class="stat-card activos">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Pedidos únicos</span>
+          <span class="stat-card-num" id="stat-hist-pedidos">0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+
+      <div class="stat-card finalizados">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="9" x2="10" y2="15"></line><line x1="14" y1="9" x2="14" y2="15"></line></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Tiempo/producto prom.</span>
+          <span class="stat-card-num" id="stat-hist-tpp" style="font-size:20px;">--:--</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+
+      <div class="stat-card pausados">
+        <div class="stat-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        </div>
+        <div class="stat-card-body">
+          <span class="stat-card-label">Monto total</span>
+          <span class="stat-card-num" id="stat-hist-monto" style="font-size:20px;">RD$ 0</span>
+          <span class="stat-card-bar"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTERS CARD -->
+    <div class="filters-card">
+      <div class="filters-card-title">Filtros</div>
+      <div class="filters-grid">
+        <div class="field-group">
+          <label for="hist-desde">Desde</label>
+          <input type="date" id="hist-desde" />
+        </div>
+        <div class="field-group">
+          <label for="hist-hasta">Hasta</label>
+          <input type="date" id="hist-hasta" />
+        </div>
+        <div class="field-group">
+          <label for="hist-sacador">Sacador</label>
+          <select id="hist-sacador">
+            <option value="">Todos los sacadores</option>
+          </select>
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button class="add" type="button" onclick="cargarHistorial()">🔍 Buscar</button>
+        <button class="btn-delete-all" onclick="limpiarFiltroHistorial()">✕ Limpiar filtros</button>
+        <button class="star" type="button" onclick="exportarHistorialExcel()">⬇ Exportar a Excel</button>
+      </div>
+    </div>
+
+    <!-- LIST SECTION -->
+    <div class="list-section">
+      <div class="list-toolbar">
+        <input
+          type="text"
+          id="hist-filtro-texto"
+          placeholder="🔍 Buscar por código..."
+          oninput="renderTablaHistorial()"
+        />
+        <span class="filter-count" id="hist-filter-count">0 registros</span>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="historial-table" id="historial-table" style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:10px 12px;">Código</th>
+              <th style="text-align:left;padding:10px 12px;">Sacador</th>
+              <th style="text-align:left;padding:10px 12px;">Rol</th>
+              <th style="text-align:left;padding:10px 12px;">Equipo</th>
+              <th style="text-align:right;padding:10px 12px;">Productos</th>
+              <th style="text-align:right;padding:10px 12px;">Bultos</th>
+              <th style="text-align:right;padding:10px 12px;">Monto</th>
+              <th style="text-align:left;padding:10px 12px;">Inicio</th>
+              <th style="text-align:left;padding:10px 12px;">Fin</th>
+              <th style="text-align:right;padding:10px 12px;">Tiempo total</th>
+              <th style="text-align:right;padding:10px 12px;">Tiempo/prod</th>
+            </tr>
+          </thead>
+          <tbody id="historial-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="hist-empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div>No hay registros para el filtro seleccionado.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+
+</div><!-- /app-shell -->
+</div><!-- /main-container -->
+
+<!-- Scripts en orden correcto -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="gm-api.js"></script>
+<script src="historial.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    inicializarAutenticacionHistorial();
+  });
+</script>
+
+</body>
+</html>
