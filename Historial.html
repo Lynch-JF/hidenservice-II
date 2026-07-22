@@ -248,6 +248,7 @@
               <th style="text-align:left;padding:10px 12px;">Fin</th>
               <th style="text-align:right;padding:10px 12px;">Tiempo total</th>
               <th style="text-align:right;padding:10px 12px;">Tiempo/prod</th>
+              <th style="text-align:center;padding:10px 12px;">Acciones</th>
             </tr>
           </thead>
           <tbody id="historial-tbody"></tbody>
@@ -263,6 +264,77 @@
 
 </div><!-- /app-shell -->
 </div><!-- /main-container -->
+
+<!-- ============================================================
+     MODAL DE EDICIÓN — Historial (registro individual)
+============================================================ -->
+<div class="modal-overlay" id="modal-editar-historial-overlay">
+  <div class="modal" id="modal-editar-historial">
+    <div class="login-header">
+      <h2>✏️ Editar registro</h2>
+      <p>Modifica los datos del pedido finalizado</p>
+    </div>
+
+    <div class="login-body">
+      <input type="hidden" id="edit-id" />
+
+      <div class="filters-grid">
+        <div class="field-group">
+          <label for="edit-codigo">Código de pedido</label>
+          <input type="text" id="edit-codigo" />
+        </div>
+        <div class="field-group">
+          <label for="edit-sacador">Sacador</label>
+          <input type="text" id="edit-sacador" />
+        </div>
+        <div class="field-group">
+          <label for="edit-rol">Rol</label>
+          <select id="edit-rol">
+            <option value="Lider">Líder</option>
+            <option value="Aux">Aux</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="edit-equipo">Equipo completo</label>
+          <input type="text" id="edit-equipo" />
+        </div>
+        <div class="field-group">
+          <label for="edit-productos">Cantidad de productos</label>
+          <input type="number" id="edit-productos" min="0" />
+        </div>
+        <div class="field-group">
+          <label for="edit-bultos">Bultos</label>
+          <input type="number" id="edit-bultos" min="0" />
+        </div>
+        <div class="field-group">
+          <label for="edit-monto">Monto final (RD$)</label>
+          <input type="number" id="edit-monto" min="0" step="0.01" />
+        </div>
+        <div class="field-group">
+          <label for="edit-inicio">Hora inicio</label>
+          <input type="datetime-local" id="edit-inicio" />
+        </div>
+        <div class="field-group">
+          <label for="edit-fin">Hora fin</label>
+          <input type="datetime-local" id="edit-fin" />
+        </div>
+      </div>
+      <p class="modal-hint" style="margin-top: 8px;">
+        El tiempo total y el tiempo por producto se recalculan automáticamente al guardar, según las horas de inicio y fin.
+      </p>
+      <p class="modal-hint error-msg" id="edit-error" style="margin-top: 8px;"></p>
+    </div>
+
+    <div class="login-footer" style="display:flex;gap:8px;">
+      <button class="modal-btn" type="button" onclick="cerrarModalEditarHistorial()" style="flex:1;">
+        Cancelar
+      </button>
+      <button class="modal-btn primary" type="button" id="btn-guardar-edicion-historial" onclick="guardarEdicionHistorial()" style="flex:1;">
+        💾 Guardar cambios
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Scripts en orden correcto -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
