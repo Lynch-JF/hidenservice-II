@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuración — Gestión de pedidos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+
+<!-- ============================================================
+     MODAL DE LOGIN
+============================================================ -->
+<div class="modal-overlay" id="modal-login-overlay">
+  <div class="modal modal-login" id="modal-login">
+    <div class="login-header">
+      <img src="LOGO-Photoroom.png" alt="Logo" class="login-logo" />
+      <h2>Gestión de Pedidos</h2>
+      <p>Inicia sesión para continuar</p>
+    </div>
+    <div class="login-body">
+      <div class="modal-field">
+        <label for="login-email">📧 Email</label>
+        <input type="email" id="login-email" placeholder="tu@email.com" />
+      </div>
+      <div class="modal-field">
+        <label for="login-password">🔒 Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••" />
+      </div>
+      <p class="modal-hint error-msg" id="login-error" style="margin-top: 8px;"></p>
+      <p class="modal-hint" id="login-loading" style="color: var(--text-muted); text-align: center; display: none;">
+        Validando credenciales...
+      </p>
+    </div>
+    <div class="login-footer">
+      <button class="modal-btn primary" id="btn-login" onclick="autenticarConfig()" style="width: 100%;">
+        🔓 Iniciar sesión
+      </button>
+    </div>
+    <div class="login-footer-info">
+      <small>🔐 Tu sesión se mantendrá segura. Cerrar la sesión eliminará tu token.</small>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     CONTENIDO PRINCIPAL
+============================================================ -->
+<div class="main-container" id="main-app" style="display: none;">
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="LOGO-Photoroom.png" alt="Logo" />
+      <span>Gestión de<br>Pedidos</span>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="index.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <span>Pedidos</span>
+      </a></li>
+      <li><a href="Reportes.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span>Reporte</span>
+      </a></li>
+      <li><a href="Historial.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Historial</span>
+      </a></li>
+      <li><a href="Sacadores.html">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Sacadores</span>
+      </a></li>
+      <li><a href="#">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Productos</span>
+      </a></li>
+      <li><a href="Configuracion.html" class="active">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Configuración</span>
+      </a></li>
+    </ul>
+
+    <div class="sidebar-clock">
+      <div class="sidebar-clock-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div>
+        <div class="sidebar-clock-label">Hora actual</div>
+        <div class="sidebar-clock-time" id="sidebar-clock-time">--:--:--</div>
+        <div class="sidebar-clock-date" id="sidebar-clock-date"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO -->
+  <div class="content-area">
+
+    <header class="header-bar">
+      <div class="header-page">
+        <div class="header-page-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </div>
+        <span class="header-page-title">Configuración</span>
+      </div>
+      <div class="header-actions">
+        <div class="user-menu" tabindex="0">
+          <button class="user-menu-trigger" type="button">
+            <span class="user-avatar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
+            <span class="user-info">
+              <span class="user-name" id="usuario-nombre">Usuario</span>
+              <span class="user-role">Administrador</span>
+            </span>
+            <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="user-menu-dropdown">
+            <button type="button" onclick="cerrarSesionConfig()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-heading">
+      <h1>Configuración</h1>
+      <p>Administra usuarios, roles y los parámetros generales del sistema</p>
+    </div>
+
+    <!-- ============================================================
+         LAYOUT: sub-nav de configuración + panel de contenido
+    ============================================================ -->
+    <div class="config-layout" style="display:flex;gap:20px;align-items:flex-start;">
+
+      <!-- SUB-NAV -->
+      <nav class="config-subnav" style="flex:0 0 260px;background:var(--surface,#161622);border-radius:12px;padding:10px;">
+        <button class="config-tab-btn active" data-tab="usuarios" onclick="mostrarTabConfig('usuarios')">👥 Gestión de Usuarios y Roles</button>
+        <button class="config-tab-btn" data-tab="general" onclick="mostrarTabConfig('general')">⚙️ Configuración General</button>
+        <button class="config-tab-btn" data-tab="sucursales" onclick="mostrarTabConfig('sucursales')">🏬 Sucursales</button>
+        <button class="config-tab-btn" data-tab="horarios" onclick="mostrarTabConfig('horarios')">⏱️ Horarios y Pausas Automáticas</button>
+        <button class="config-tab-btn" data-tab="apariencia" onclick="mostrarTabConfig('apariencia')">🎨 Apariencia</button>
+        <button class="config-tab-btn" data-tab="notificaciones" onclick="mostrarTabConfig('notificaciones')">🔔 Notificaciones</button>
+        <button class="config-tab-btn" data-tab="parametros" onclick="mostrarTabConfig('parametros')">📦 Parámetros de Pedidos</button>
+        <button class="config-tab-btn" data-tab="seguridad" onclick="mostrarTabConfig('seguridad')">🔒 Seguridad</button>
+        <button class="config-tab-btn" data-tab="backups" onclick="mostrarTabConfig('backups')">💾 Copias de Seguridad</button>
+        <button class="config-tab-btn" data-tab="integraciones" onclick="mostrarTabConfig('integraciones')">🔌 Integraciones</button>
+        <button class="config-tab-btn" data-tab="reportes-config" onclick="mostrarTabConfig('reportes-config')">📊 Configuración de Reportes</button>
+      </nav>
+
+      <!-- PANEL -->
+      <div class="config-panel" style="flex:1;min-width:0;">
+
+        <!-- ── TAB: USUARIOS (funcional) ── -->
+        <div class="config-tab-panel" id="tab-usuarios">
+          <div class="filters-card">
+            <div class="filters-card-title">Usuarios del sistema</div>
+            <div class="filters-actions">
+              <button class="add" type="button" onclick="abrirModalUsuario()">+ Registrar usuario</button>
+            </div>
+          </div>
+
+          <div class="list-section">
+            <div class="list-toolbar">
+              <input type="text" id="usr-filtro-texto" placeholder="🔍 Buscar por nombre o email..." oninput="renderListaUsuarios()" />
+              <span class="filter-count" id="usr-filter-count">0 usuarios</span>
+            </div>
+            <div id="usuarios-list">
+              <div class="empty-state" id="usr-empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div>No hay usuarios registrados todavía.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TABS placeholder (arquitectura lista, contenido pendiente) ── -->
+        <div class="config-tab-panel" id="tab-general" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">⚙️ Configuración General</div>
+          <p class="modal-hint">Próximamente: nombre de la empresa, zona horaria, moneda.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-sucursales" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">🏬 Sucursales</div>
+          <p class="modal-hint">Próximamente: alta y gestión de sucursales/almacenes.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-horarios" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">⏱️ Horarios y Pausas Automáticas</div>
+          <p class="modal-hint">Ya gestionable hoy desde <a href="Sacadores.html">Sacadores</a> (horario individual) y el botón "Horas Extras" en Pedidos. Aquí irán las reglas globales por defecto.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-apariencia" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">🎨 Apariencia</div>
+          <p class="modal-hint">Próximamente: tema, colores y logo.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-notificaciones" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">🔔 Notificaciones</div>
+          <p class="modal-hint">Próximamente: alertas por email/Slack de pedidos atrasados.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-parametros" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">📦 Parámetros de Pedidos</div>
+          <p class="modal-hint">Próximamente: umbral de equipo (hoy fijo en 100 referencias) y otros valores por defecto.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-seguridad" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">🔒 Seguridad</div>
+          <p class="modal-hint">Próximamente: expiración de sesión, políticas de contraseña.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-backups" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">💾 Copias de Seguridad</div>
+          <p class="modal-hint">Próximamente: exportar/respaldar la base de datos.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-integraciones" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">🔌 Integraciones</div>
+          <p class="modal-hint">Próximamente: webhooks u otras integraciones externas.</p></div>
+        </div>
+        <div class="config-tab-panel" id="tab-reportes-config" style="display:none;">
+          <div class="filters-card"><div class="filters-card-title">📊 Configuración de Reportes</div>
+          <p class="modal-hint">Próximamente: KPIs por defecto del dashboard de Reportes.</p></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+
+</div><!-- /app-shell -->
+</div><!-- /main-container -->
+
+<!-- ============================================================
+     MODAL: Registrar / Editar usuario
+============================================================ -->
+<div class="modal-overlay" id="modal-usuario-overlay" onclick="handleUsuarioOverlayClick(event)">
+  <div class="modal" id="modal-usuario" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title" id="usuario-modal-title">Registrar usuario</div>
+      <div class="modal-subtitle">Nombre, email, contraseña y rol</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label for="usr-nombre">Nombre completo</label>
+        <input type="text" id="usr-nombre" placeholder="Ej: María Pérez" />
+      </div>
+      <div class="modal-field">
+        <label for="usr-email">Email</label>
+        <input type="email" id="usr-email" placeholder="usuario@empresa.com" />
+      </div>
+      <div class="modal-field">
+        <label for="usr-password">Contraseña <span id="usr-password-hint-edit" style="display:none;font-weight:400;">(dejar vacío para no cambiarla)</span></label>
+        <input type="password" id="usr-password" placeholder="Mínimo 6 caracteres" />
+      </div>
+      <div class="modal-field">
+        <label for="usr-rol">Rol</label>
+        <select id="usr-rol">
+          <option value="Operador">Operador</option>
+          <option value="Administrador">Administrador</option>
+        </select>
+      </div>
+      <div class="modal-field" id="usr-activo-wrap" style="display:none;align-items:center;gap:8px;">
+        <input type="checkbox" id="usr-activo" style="width:auto;" />
+        <label for="usr-activo" style="margin:0;">Activo</label>
+      </div>
+      <p class="modal-hint error-msg" id="usr-error"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn secondary" onclick="cerrarModalUsuario()">Cancelar</button>
+      <button class="modal-btn primary" id="usr-btn-guardar" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .config-tab-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .config-tab-btn:hover { background: var(--surface2, #1e1e2e); }
+  .config-tab-btn.active { background: var(--accent, #2d6a4f); color: #fff; font-weight: 600; }
+</style>
+
+<!-- Scripts en orden correcto -->
+<script src="gm-api.js"></script>
+<script src="configuracion.js"></script>
+
+<script>
+  function handleUsuarioOverlayClick(e) {
+    if (e.target === document.getElementById("modal-usuario-overlay")) cerrarModalUsuario();
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") cerrarModalUsuario();
+    });
+    inicializarAutenticacionConfig();
+  });
+</script>
+
+</body>
+</html>
