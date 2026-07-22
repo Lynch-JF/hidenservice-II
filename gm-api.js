@@ -258,6 +258,51 @@ const GMApi = {
   },
 
   /**
+   * ─── SACADORES ──────────────────────────────────────────
+   */
+
+  /**
+   * GET /api/sacadores — obtener lista de sacadores
+   * @param {boolean|null} activo - true/false para filtrar, null para traer todos
+   */
+  async obtenerSacadores(activo = null) {
+    let path = "/api/sacadores";
+    if (activo !== null) path += `?activo=${activo ? "true" : "false"}`;
+    return this.get(path);
+  },
+
+  /**
+   * GET /api/sacadores/:id — obtener un sacador específico
+   */
+  async obtenerSacador(id) {
+    return this.get(`/api/sacadores/${id}`);
+  },
+
+  /**
+   * POST /api/sacadores — crear un nuevo sacador
+   * @param {object} datos - { nombre, activo, horario_entrada, salida_lun_jue,
+   *                            salida_viernes, salida_sabado, almuerzo_inicio,
+   *                            almuerzo_fin, breaks: [{hora, duracion_min}] }
+   */
+  async crearSacador(datos) {
+    return this.post("/api/sacadores", datos);
+  },
+
+  /**
+   * PATCH /api/sacadores/:id — actualizar un sacador existente
+   */
+  async actualizarSacador(id, updates) {
+    return this.patch(`/api/sacadores/${id}`, updates);
+  },
+
+  /**
+   * DELETE /api/sacadores/:id — eliminar un sacador
+   */
+  async eliminarSacador(id) {
+    return this.del(`/api/sacadores/${id}`);
+  },
+
+  /**
    * ─── HORAS EXTRAS ──────────────────────────────────────
    */
 
