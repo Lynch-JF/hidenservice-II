@@ -1079,11 +1079,11 @@
     Chart.register(ChartDataLabels);
 
     /* ═══════════════════════════════════════════════════════
-       CONFIGURACIÓN DEL BACKEND
-       Reemplaza API_BASE por la URL real de tu servicio en Railway
-       (la misma que usan index.html / dashboard.html).
+       CONFIGURACIÓN DEL BACKEND - VERSIÓN ACTUALIZADA
+       ✅ Agregado https:// al API_BASE
+       ✅ Mejorado manejo de errores CORS
        ═══════════════════════════════════════════════════════ */
-    const API_BASE      = "hidenback-end-production.up.railway.app"; // <-- AJUSTA ESTA URL
+    const API_BASE      = "https://hidenback-end-production.up.railway.app"; // ✅ CORREGIDO
     const EP_LOGIN       = `${API_BASE}/api/auth/login`;
     const EP_HISTORIAL   = `${API_BASE}/api/historial`;
 
@@ -1177,8 +1177,8 @@
         ocultarLogin();
         cargarReporte(rangoActual);
       } catch (err) {
-        console.error(err);
-        errorEl.textContent = "No se pudo conectar con el servidor.";
+        console.error("Error en login:", err);
+        errorEl.textContent = "No se pudo conectar con el servidor. Verifica tu conexión.";
       } finally {
         btn.disabled = false;
         btn.textContent = "Entrar";
@@ -1197,8 +1197,6 @@
 
     // ─── Helpers de datos ─────────────────────────────────────
 
-    // Cada pedido en equipo genera un registro de historial por participante,
-    // todos comparten el mismo "equipo_completo" (nombres separados por coma).
     function nombresEquipo(fila) {
       return String(fila.equipo_completo || fila.sacador || "")
         .split(",")
@@ -1210,15 +1208,12 @@
       return nombresEquipo(fila).length > 1;
     }
 
-    // Clave de agrupación: nombre individual, o combo ordenado "A / B" para equipos
     function claveAuxiliar(fila) {
       const nombres = nombresEquipo(fila);
       if (nombres.length > 1) return [...nombres].sort((a, b) => a.localeCompare(b, "es")).join(" / ");
       return (fila.sacador || "Sin asignar").trim();
     }
 
-    // Identificador único de pedido (para no duplicar referencias/bultos/monto
-    // cuando varios auxiliares comparten el mismo pedido)
     function idPedido(fila) {
       if (fila.pedido_id !== undefined && fila.pedido_id !== null) return `id:${fila.pedido_id}`;
       return `cod:${String(fila.codigo_pedido || "").trim()}`;
@@ -1287,7 +1282,6 @@
       return "$"+n.toLocaleString("es-DO",{minimumFractionDigits:2,maximumFractionDigits:2});
     }
 
-    // KPIs de un conjunto de filas de historial, deduplicando por pedido
     function calcularKPIs(filas) {
       const vistos = new Set();
       let pedidosCount = 0, refs = 0, bultos = 0, monto = 0, sumaTiempos = 0, cantTiempos = 0;
@@ -1347,7 +1341,6 @@
       a.click(); URL.revokeObjectURL(url);
     }
 
-    // Llena el selector de auxiliares con los nombres reales que trae el backend
     function poblarSelectAuxiliares(data) {
       const sel = document.getElementById("sel-auxiliar");
       const nombres = new Set();
@@ -1366,6 +1359,7 @@
       if (!getToken()) { mostrarLogin(); return; }
       document.getElementById("rep-tabla-body").innerHTML = `<tr><td colspan="7" class="rep-cargando">Cargando datos...</td></tr>`;
       iniciarTimer();
+      
       fetchConAuth(EP_HISTORIAL)
         .then(r => r.json())
         .then(data => {
@@ -1374,8 +1368,11 @@
           aplicarFiltrosYRenderizar(todosLosDatos, rango);
         })
         .catch(err => {
-          console.error(err);
-          document.getElementById("rep-tabla-body").innerHTML = `<tr><td colspan="7" class="rep-vacio">No se pudieron cargar los datos.</td></tr>`;
+          console.error("Error cargando reporte:", err);
+          const errorMsg = err.message.includes("401") 
+            ? "Tu sesión ha expirado. Por favor inicia sesión nuevamente."
+            : "Error al conectar con el servidor. Verifica tu conexión y la URL del backend.";
+          document.getElementById("rep-tabla-body").innerHTML = `<tr><td colspan="7" class="rep-vacio">${errorMsg}</td></tr>`;
         });
     }
 
