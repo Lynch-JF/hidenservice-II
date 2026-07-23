@@ -210,6 +210,8 @@
       border: 1px solid var(--rep-border);
       border-radius: 999px;
       padding: 6px 14px 6px 6px;
+      cursor: pointer;
+      position: relative;
     }
     .app-topbar-user .avatar {
       width: 32px; height: 32px; border-radius: 50%;
@@ -222,6 +224,33 @@
     .app-topbar-user .user-meta strong { display: block; font-size: 0.84rem; font-weight: 700; }
     .app-topbar-user .user-meta span { font-size: 0.72rem; color: var(--rep-text-light); }
     .app-topbar-user svg { width: 14px; height: 14px; color: var(--rep-text-dim); margin-left: 2px; }
+
+    #menu-usuario {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius-sm);
+      box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+      min-width: 150px;
+      overflow: hidden;
+      z-index: 50;
+    }
+    #menu-usuario.abierto { display: block; }
+    #menu-usuario button {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--rep-text);
+      font-size: 0.84rem;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    #menu-usuario button:hover { background: var(--rep-card-hover); }
 
     /* ── Dashboard reportes ───────────────────────────── */
     .dashboard-reportes {
@@ -599,6 +628,70 @@
       transition: height 0.3s ease;
     }
 
+    /* ── Login overlay ─────────────────────────────────── */
+    .login-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,14,20,0.94);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--rep-card);
+      border: 1px solid var(--rep-border);
+      border-radius: var(--rep-radius);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      padding: 32px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .login-card .logo-mark {
+      width: 42px; height: 42px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, #F2845C, #E84393 45%, #4FA3D1 75%, var(--rep-primary));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #fff; font-size: 1.1rem;
+      margin-bottom: 16px;
+    }
+    .login-card h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 800; color: var(--rep-text); }
+    .login-card p.login-sub { margin: 0 0 20px; font-size: 0.82rem; color: var(--rep-text-light); }
+    .login-card label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--rep-text-light); margin-bottom: 6px; }
+    .login-card input {
+      width: 100%;
+      background: var(--rep-bg);
+      border: 1px solid var(--rep-border);
+      color: var(--rep-text);
+      border-radius: var(--rep-radius-sm);
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+      outline: none;
+    }
+    .login-card input:focus { border-color: var(--rep-primary); }
+    .login-card button[type="submit"] {
+      width: 100%;
+      background: var(--rep-primary);
+      color: #06210F;
+      border: none;
+      border-radius: var(--rep-radius-sm);
+      padding: 11px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .login-card button[type="submit"]:hover { background: #34D670; }
+    .login-card button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
+    .login-error {
+      font-size: 0.8rem;
+      color: #F87171;
+      min-height: 18px;
+      margin-bottom: 4px;
+    }
+
     @media (max-width: 1080px) { .rep-kpis { grid-template-columns: repeat(3,1fr); } }
     @media (max-width: 700px) {
       .app-sidebar { display: none; }
@@ -614,6 +707,23 @@
   </style>
 </head>
 <body>
+
+  <!-- ══════════ LOGIN OVERLAY (bloquea la app hasta autenticar contra el backend) ══════════ -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="logo-mark">S</div>
+      <h2>Iniciar sesión</h2>
+      <p class="login-sub">Ingresa tus credenciales del sistema para ver el reporte.</p>
+      <form id="login-form">
+        <label for="login-email">Correo</label>
+        <input type="email" id="login-email" autocomplete="username" required />
+        <label for="login-password">Contraseña</label>
+        <input type="password" id="login-password" autocomplete="current-password" required />
+        <div id="login-error" class="login-error"></div>
+        <button type="submit" id="login-btn">Entrar</button>
+      </form>
+    </div>
+  </div>
 
   <div class="app-shell">
 
@@ -694,13 +804,16 @@
           </a>
         </nav>
 
-        <div class="app-topbar-user">
-          <div class="avatar">JF</div>
+        <div class="app-topbar-user" id="topbar-user">
+          <div class="avatar" id="user-avatar">--</div>
           <div class="user-meta">
-            <strong>Juan Francisco Jimenez</strong>
-            <span>Administrador</span>
+            <strong id="user-nombre">—</strong>
+            <span id="user-rol">—</span>
           </div>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <div id="menu-usuario">
+            <button id="btn-logout">Cerrar sesión</button>
+          </div>
         </div>
       </header>
 
@@ -734,20 +847,6 @@
           </div>
           <select id="sel-auxiliar">
             <option value="">Todos los auxiliares</option>
-            <option value="Omar Marmolejos Fajardo">Omar Marmolejos Fajardo</option>
-            <option value="Jairo Fernandez Salcedo">Jairo Fernandez Salcedo</option>
-            <option value="Ismael Augusto Veras Lasuse">Ismael Augusto Veras Lasuse</option>
-            <option value="Fernando Antonio Burgos Cabrera">Fernando Antonio Burgos Cabrera</option>
-            <option value="Juan De Jesús Peña Pérez">Juan De Jesús Peña Pérez</option>
-            <option value="Luis David Nuñez Santos">Luis David Nuñez Santos</option>
-            <option value="Yustin Alexander Mendez">Yustin Alexander Mendez</option>
-            <option value="Luis Eduardo Reyes">Luis Eduardo Reyes</option>
-            <option value="Omelbe Gomez Valdez">Omelbe Gomez Valdez</option>
-            <option value="Bryhan Santo Cordero">Bryhan Santo Cordero</option>
-            <option value="Enrique Nuñez Brito">Enrique Nuñez Brito</option>
-            <option value="Cirilo Reynoso Acevedo">Cirilo Reynoso Acevedo</option>
-            <option value="Yan Carlos Cruz Paulino">Yan Carlos Cruz Paulino</option>
-            <option value="Wilkin Ortega Diaz">Wilkin Ortega Diaz</option>
           </select>
         </div>
 
@@ -850,7 +949,7 @@
               </div>
             </div>
             <div class="rep-card-subtitulo">
-              <span class="dot-team"></span> Pedidos realizados en conjunto (sacador con "/")
+              <span class="dot-team"></span> Pedidos realizados en conjunto (varios auxiliares por pedido)
             </div>
             <div id="grafica-equipos-wrapper" class="rep-grafica-wrapper compacta">
               <canvas id="grafica-equipos"></canvas>
@@ -929,7 +1028,7 @@
               Tiempo por Artículo — Equipos (mm:ss)
             </h3>
             <div class="rep-card-subtitulo">
-              <span class="dot-team"></span> Solo pedidos de equipo (con "/")
+              <span class="dot-team"></span> Solo pedidos de equipo
             </div>
             <div class="tiempo-wrapper-team" id="tiempo-wrapper-team" style="height:320px;">
               <canvas id="grafica-tiempo-team"></canvas>
@@ -979,19 +1078,19 @@
   <script>
     Chart.register(ChartDataLabels);
 
-    const API_SHEET = "https://api.sheetbest.com/sheets/cce35084-ee62-4934-b2ed-eb5fcd2d414b";
+    /* ═══════════════════════════════════════════════════════
+       CONFIGURACIÓN DEL BACKEND
+       Reemplaza API_BASE por la URL real de tu servicio en Railway
+       (la misma que usan index.html / dashboard.html).
+       ═══════════════════════════════════════════════════════ */
+    const API_BASE      = "https://TU-BACKEND.up.railway.app"; // <-- AJUSTA ESTA URL
+    const EP_LOGIN       = `${API_BASE}/api/auth/login`;
+    const EP_HISTORIAL   = `${API_BASE}/api/historial`;
 
-    const MAX_REFS_POR_PEDIDO = 500;
+    const TOKEN_KEY = "gm_token";
+    const USER_KEY  = "gm_usuario";
+
     const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
-
-    const CAMPOS = {
-      sacador:     ["Sacador", "Sacador "],
-      horaFin:     ["HoraFin", "HoraFin "],
-      referencias: ["CantidadProductos", "CantidadProductos "],
-      bultos:      ["Bultos", "Bultos "],
-      tiempo:      ["Grafica", "Grafica ", "TiempoPorProducto", "TiempoPorProducto "],
-      monto:       ["MontoFinal", "MontoFinal "]
-    };
 
     let graficaIndividuales  = null;
     let graficaEquipos       = null;
@@ -1008,10 +1107,121 @@
 
     let filtroGraficaTiempo = null;
 
-    // ─── Helpers ─────────────────────────────────────────────
+    // ─── Sesión / autenticación ──────────────────────────────
 
-    function esEquipo(sacador) {
-      return /\//.test(String(sacador || "").trim());
+    function getToken()   { return localStorage.getItem(TOKEN_KEY); }
+    function getUsuario() { try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; } }
+
+    function guardarSesion(token, usuario) {
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(usuario));
+    }
+
+    function cerrarSesion() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      if (timerInterval) clearInterval(timerInterval);
+      mostrarLogin();
+    }
+
+    function mostrarLogin(mensaje) {
+      document.getElementById("login-overlay").style.display = "flex";
+      document.getElementById("login-error").textContent = mensaje || "";
+    }
+    function ocultarLogin() {
+      document.getElementById("login-overlay").style.display = "none";
+    }
+
+    function aplicarUsuarioEnTopbar(usuario) {
+      if (!usuario || !usuario.nombre) return;
+      const iniciales = usuario.nombre.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join("").toUpperCase();
+      document.getElementById("user-avatar").textContent = iniciales || "--";
+      document.getElementById("user-nombre").textContent = usuario.nombre;
+      document.getElementById("user-rol").textContent = usuario.rol || "Usuario";
+    }
+
+    // fetch autenticado: agrega el Bearer token y maneja 401 (token vencido/ inválido)
+    async function fetchConAuth(url, opciones = {}) {
+      const token = getToken();
+      const headers = Object.assign({}, opciones.headers || {}, { Authorization: `Bearer ${token}` });
+      const resp = await fetch(url, Object.assign({}, opciones, { headers }));
+      if (resp.status === 401) {
+        cerrarSesion("Tu sesión expiró. Inicia sesión de nuevo.");
+        throw new Error("401 no autorizado");
+      }
+      return resp;
+    }
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email    = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+      const errorEl  = document.getElementById("login-error");
+      const btn      = document.getElementById("login-btn");
+      errorEl.textContent = "";
+      btn.disabled = true;
+      btn.textContent = "Ingresando...";
+      try {
+        const resp = await fetch(EP_LOGIN, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          errorEl.textContent = data.error || "Credenciales inválidas.";
+          return;
+        }
+        guardarSesion(data.token, data.usuario);
+        aplicarUsuarioEnTopbar(data.usuario);
+        ocultarLogin();
+        cargarReporte(rangoActual);
+      } catch (err) {
+        console.error(err);
+        errorEl.textContent = "No se pudo conectar con el servidor.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+      }
+    });
+
+    document.getElementById("topbar-user").addEventListener("click", (e) => {
+      document.getElementById("menu-usuario").classList.toggle("abierto");
+      e.stopPropagation();
+    });
+    document.addEventListener("click", () => document.getElementById("menu-usuario").classList.remove("abierto"));
+    document.getElementById("btn-logout").addEventListener("click", (e) => {
+      e.stopPropagation();
+      cerrarSesion();
+    });
+
+    // ─── Helpers de datos ─────────────────────────────────────
+
+    // Cada pedido en equipo genera un registro de historial por participante,
+    // todos comparten el mismo "equipo_completo" (nombres separados por coma).
+    function nombresEquipo(fila) {
+      return String(fila.equipo_completo || fila.sacador || "")
+        .split(",")
+        .map(n => n.trim())
+        .filter(Boolean);
+    }
+
+    function esEquipo(fila) {
+      return nombresEquipo(fila).length > 1;
+    }
+
+    // Clave de agrupación: nombre individual, o combo ordenado "A / B" para equipos
+    function claveAuxiliar(fila) {
+      const nombres = nombresEquipo(fila);
+      if (nombres.length > 1) return [...nombres].sort((a, b) => a.localeCompare(b, "es")).join(" / ");
+      return (fila.sacador || "Sin asignar").trim();
+    }
+
+    // Identificador único de pedido (para no duplicar referencias/bultos/monto
+    // cuando varios auxiliares comparten el mismo pedido)
+    function idPedido(fila) {
+      if (fila.pedido_id !== undefined && fila.pedido_id !== null) return `id:${fila.pedido_id}`;
+      return `cod:${String(fila.codigo_pedido || "").trim()}`;
     }
 
     function minAMmss(minutos) {
@@ -1020,39 +1230,6 @@
       const mm = Math.floor(totalSeg / 60);
       const ss = String(totalSeg % 60).padStart(2, "0");
       return `${mm}:${ss}`;
-    }
-
-    function obtenerCampo(obj, posibles) {
-      for (const key of posibles) {
-        const val = obj[key];
-        if (val !== undefined && val !== null && String(val).trim() !== "") return val;
-      }
-      return "";
-    }
-
-    function parsearNumero(raw) {
-      const str = String(raw).trim();
-      if (str.includes(",") && str.includes(".")) return parseFloat(str.replace(/,/g, ""));
-      if (str.includes(",") && !str.includes(".")) return parseFloat(str.replace(",", "."));
-      return parseFloat(str);
-    }
-
-    function obtenerNumero(obj, posibles) {
-      const raw = obtenerCampo(obj, posibles);
-      if (raw === "") return 0;
-      const v = parsearNumero(raw);
-      return isNaN(v) ? 0 : v;
-    }
-
-    function obtenerMonto(obj, posibles) {
-      const raw = String(obtenerCampo(obj, posibles)).replace(/\$/g, "").replace(/,/g, "");
-      const v = parseFloat(raw);
-      return isNaN(v) ? 0 : v;
-    }
-
-    function obtenerReferencias(obj) {
-      const v = obtenerNumero(obj, CAMPOS.referencias);
-      return v > MAX_REFS_POR_PEDIDO ? 0 : v;
     }
 
     function esMismaFecha(f1, f2) {
@@ -1110,23 +1287,28 @@
       return "$"+n.toLocaleString("es-DO",{minimumFractionDigits:2,maximumFractionDigits:2});
     }
 
-    function calcularKPIs(pedidos) {
-      let refs = 0, bultos = 0, monto = 0, sumaTiempos = 0, cantTiempos = 0;
+    // KPIs de un conjunto de filas de historial, deduplicando por pedido
+    function calcularKPIs(filas) {
       const vistos = new Set();
-      pedidos.forEach(p => {
-        const cod = String(p["Codigo P"] || p["CodigoP"] || "").trim();
-        if (!vistos.has(cod) || !cod) { refs += obtenerReferencias(p); vistos.add(cod); }
-        bultos += obtenerNumero(p, CAMPOS.bultos);
-        monto  += obtenerMonto(p, CAMPOS.monto);
-        const t = obtenerNumero(p, CAMPOS.tiempo);
-        if (t > 0) { sumaTiempos += t; cantTiempos++; }
+      let pedidosCount = 0, refs = 0, bultos = 0, monto = 0, sumaTiempos = 0, cantTiempos = 0;
+      filas.forEach(f => {
+        const id = idPedido(f);
+        if (!vistos.has(id)) {
+          vistos.add(id);
+          pedidosCount++;
+          refs   += Number(f.cantidad_productos) || 0;
+          bultos += Number(f.bultos) || 0;
+          monto  += Number(f.monto_final) || 0;
+        }
+        const seg = Number(f.tiempo_por_producto_segundos) || 0;
+        if (seg > 0) { sumaTiempos += seg / 60; cantTiempos++; }
       });
       return {
-        pedidos:     pedidos.length,
+        pedidos: pedidosCount,
         referencias: refs,
         bultos,
         monto,
-        tiempo:      cantTiempos > 0 ? sumaTiempos / cantTiempos : 0
+        tiempo: cantTiempos > 0 ? sumaTiempos / cantTiempos : 0
       };
     }
 
@@ -1165,15 +1347,32 @@
       a.click(); URL.revokeObjectURL(url);
     }
 
+    // Llena el selector de auxiliares con los nombres reales que trae el backend
+    function poblarSelectAuxiliares(data) {
+      const sel = document.getElementById("sel-auxiliar");
+      const nombres = new Set();
+      data.forEach(f => nombresEquipo(f).forEach(n => nombres.add(n)));
+      const ordenados = Array.from(nombres).sort((a, b) => a.localeCompare(b, "es"));
+      const valorPrevio = sel.value;
+      sel.innerHTML = `<option value="">Todos los auxiliares</option>` +
+        ordenados.map(n => `<option value="${n}">${n}</option>`).join("");
+      if (ordenados.includes(valorPrevio)) sel.value = valorPrevio;
+    }
+
     // ─── Carga y filtrado ────────────────────────────────────
 
     function cargarReporte(rango) {
       rangoActual = rango;
+      if (!getToken()) { mostrarLogin(); return; }
       document.getElementById("rep-tabla-body").innerHTML = `<tr><td colspan="7" class="rep-cargando">Cargando datos...</td></tr>`;
       iniciarTimer();
-      fetch(API_SHEET)
+      fetchConAuth(EP_HISTORIAL)
         .then(r => r.json())
-        .then(data => { todosLosDatos = data; aplicarFiltrosYRenderizar(data, rango); })
+        .then(data => {
+          todosLosDatos = Array.isArray(data) ? data : [];
+          poblarSelectAuxiliares(todosLosDatos);
+          aplicarFiltrosYRenderizar(todosLosDatos, rango);
+        })
         .catch(err => {
           console.error(err);
           document.getElementById("rep-tabla-body").innerHTML = `<tr><td colspan="7" class="rep-vacio">No se pudieron cargar los datos.</td></tr>`;
@@ -1182,13 +1381,13 @@
 
     function aplicarFiltrosYRenderizar(data, rango) {
       const ahora = new Date();
-      const pedidosFiltrados = data.filter(p => {
-        const fecha = new Date(obtenerCampo(p, CAMPOS.horaFin));
+      const filasFiltradas = data.filter(f => {
+        const fecha = new Date(f.hora_fin);
         if (isNaN(fecha.getTime())) return false;
         if (!pasaFiltroFecha(fecha, rango, ahora)) return false;
         if (filtroAuxiliar) {
-          const sac = String(obtenerCampo(p, CAMPOS.sacador) || "").trim();
-          if (!sac.includes(filtroAuxiliar) && sac !== filtroAuxiliar) return false;
+          const nombres = nombresEquipo(f);
+          if (!nombres.includes(filtroAuxiliar)) return false;
         }
         return true;
       });
@@ -1196,82 +1395,86 @@
       const rAnt = rangoAnterior(rango);
       let kpisAnt = null;
       if (rAnt) {
-        const pedidosAnt = data.filter(p => {
-          const f = new Date(obtenerCampo(p, CAMPOS.horaFin));
-          return !isNaN(f.getTime()) && pasaFiltroFechaExt(f, rAnt, ahora);
+        const filasAnt = data.filter(f => {
+          const fecha = new Date(f.hora_fin);
+          return !isNaN(fecha.getTime()) && pasaFiltroFechaExt(fecha, rAnt, ahora);
         });
-        kpisAnt = calcularKPIs(pedidosAnt);
+        kpisAnt = calcularKPIs(filasAnt);
       }
-      procesarYRenderizar(pedidosFiltrados, kpisAnt);
+      procesarYRenderizar(filasFiltradas, kpisAnt);
     }
 
-    function procesarYRenderizar(pedidos, kpisAnt) {
+    function procesarYRenderizar(filas, kpisAnt) {
       const auxiliares = {};
-      let totalMonto = 0, sumaTiemposTotal = 0, cantidadTiemposTotal = 0;
+      const vistosGlobal = new Set();
+      let totalReferencias = 0, totalBultos = 0, totalMonto = 0;
+      let sumaTiemposTotal = 0, cantidadTiemposTotal = 0;
 
-      const referenciasPorCodigo = {};
-      pedidos.forEach(p => {
-        const cod = String(p["Codigo P"] || p["CodigoP"] || "").trim();
-        if (cod && !(cod in referenciasPorCodigo)) referenciasPorCodigo[cod] = obtenerReferencias(p);
-      });
+      filas.forEach(f => {
+        const clave  = claveAuxiliar(f);
+        const esTeam = esEquipo(f);
+        const id     = idPedido(f);
 
-      const codigosContados = {};
-      pedidos.forEach(p => {
-        const sac    = String(obtenerCampo(p, CAMPOS.sacador) || "Sin asignar").trim();
-        const bultos = obtenerNumero(p, CAMPOS.bultos);
-        const tiempo = obtenerNumero(p, CAMPOS.tiempo);
-        const monto  = obtenerMonto(p, CAMPOS.monto);
-        const cod    = String(p["Codigo P"] || p["CodigoP"] || "").trim();
-        const esTeam = esEquipo(sac);
-
-        if (!auxiliares[sac]) {
-          auxiliares[sac] = { pedidos:0, referencias:0, bultos:0, monto:0, sumaTiempos:0, cantidadTiempos:0, equipo:esTeam };
-          codigosContados[sac] = new Set();
+        if (!auxiliares[clave]) {
+          auxiliares[clave] = {
+            pedidosVistos: new Set(), referencias: 0, bultos: 0, monto: 0,
+            sumaTiempos: 0, cantidadTiempos: 0, equipo: esTeam
+          };
         }
-        auxiliares[sac].pedidos++;
-        auxiliares[sac].bultos += bultos;
-        auxiliares[sac].monto  += monto;
-        totalMonto += monto;
+        const a = auxiliares[clave];
 
-        if (cod && !codigosContados[sac].has(cod)) {
-          auxiliares[sac].referencias += referenciasPorCodigo[cod] || 0;
-          codigosContados[sac].add(cod);
-        } else if (!cod) {
-          auxiliares[sac].referencias += obtenerReferencias(p);
+        if (!a.pedidosVistos.has(id)) {
+          a.pedidosVistos.add(id);
+          a.referencias += Number(f.cantidad_productos) || 0;
+          a.bultos      += Number(f.bultos) || 0;
+          a.monto       += Number(f.monto_final) || 0;
         }
 
-        if (tiempo > 0) {
-          auxiliares[sac].sumaTiempos += tiempo;
-          auxiliares[sac].cantidadTiempos++;
-          sumaTiemposTotal += tiempo;
+        if (!vistosGlobal.has(id)) {
+          vistosGlobal.add(id);
+          totalReferencias += Number(f.cantidad_productos) || 0;
+          totalBultos      += Number(f.bultos) || 0;
+          totalMonto       += Number(f.monto_final) || 0;
+        }
+
+        const seg = Number(f.tiempo_por_producto_segundos) || 0;
+        if (seg > 0) {
+          const minTiempo = seg / 60;
+          a.sumaTiempos += minTiempo;
+          a.cantidadTiempos++;
+          sumaTiemposTotal += minTiempo;
           cantidadTiemposTotal++;
         }
       });
 
-      const totalReferencias  = Object.values(referenciasPorCodigo).reduce((a, b) => a + b, 0);
-      const totalBultos       = Object.values(auxiliares).reduce((a, b) => a + b.bultos, 0);
+      const totalPedidos      = vistosGlobal.size;
       const tiempoPromGeneral = cantidadTiemposTotal > 0 ? sumaTiemposTotal / cantidadTiemposTotal : 0;
 
-      const filas = Object.entries(auxiliares).map(([nombre, d]) => ({
-        nombre, pedidos: d.pedidos, referencias: d.referencias, bultos: d.bultos,
-        monto: d.monto, tiempoProm: d.cantidadTiempos > 0 ? d.sumaTiempos / d.cantidadTiempos : 0, equipo: d.equipo
+      const filas2 = Object.entries(auxiliares).map(([nombre, d]) => ({
+        nombre,
+        pedidos: d.pedidosVistos.size,
+        referencias: d.referencias,
+        bultos: d.bultos,
+        monto: d.monto,
+        tiempoProm: d.cantidadTiempos > 0 ? d.sumaTiempos / d.cantidadTiempos : 0,
+        equipo: d.equipo
       }));
-      filas.sort((a, b) => b.pedidos - a.pedidos);
+      filas2.sort((a, b) => b.pedidos - a.pedidos);
 
-      filasActuales   = filas;
-      totalesActuales = { totalPedidos: pedidos.length, totalReferencias, totalBultos, tiempoPromGeneral, totalMonto };
+      filasActuales   = filas2;
+      totalesActuales = { totalPedidos, totalReferencias, totalBultos, tiempoPromGeneral, totalMonto };
 
-      renderizarKPIs(pedidos.length, tiempoPromGeneral, totalReferencias, totalBultos, totalMonto, kpisAnt);
-      renderizarTabla(filas, pedidos.length, totalReferencias, totalBultos, tiempoPromGeneral, totalMonto);
+      renderizarKPIs(totalPedidos, tiempoPromGeneral, totalReferencias, totalBultos, totalMonto, kpisAnt);
+      renderizarTabla(filas2, totalPedidos, totalReferencias, totalBultos, tiempoPromGeneral, totalMonto);
 
-      const filasInd  = filas.filter(f => !f.equipo);
-      const filasTeam = filas.filter(f =>  f.equipo);
+      const filasInd  = filas2.filter(f => !f.equipo);
+      const filasTeam = filas2.filter(f =>  f.equipo);
 
       renderizarGraficaIndividuales(filasInd);
       renderizarGraficaEquipos(filasTeam);
 
       if (filtroGraficaTiempo) {
-        const existe = filas.find(f => f.nombre === filtroGraficaTiempo);
+        const existe = filas2.find(f => f.nombre === filtroGraficaTiempo);
         if (!existe) limpiarFiltroGrafica();
         else         renderizarGraficaTiempoInd(filasInd, filtroGraficaTiempo);
       } else {
@@ -1599,7 +1802,14 @@
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-      cargarReporte(rangoActual);
+      const usuario = getUsuario();
+      if (getToken()) {
+        ocultarLogin();
+        aplicarUsuarioEnTopbar(usuario);
+        cargarReporte(rangoActual);
+      } else {
+        mostrarLogin();
+      }
       actualizarRelojSidebar();
       setInterval(actualizarRelojSidebar, 30000);
     });
