@@ -73,12 +73,10 @@ const GMApi = {
         headers
       });
 
-          // Token expirado o inválido
-      if (res.status === 401 && !path.startsWith("/api/auth/login")) {
-        const body = await res.clone().text();
-        console.warn("⚠️ 401 en", path, body);
-        alert("401 en " + path + ": " + body);   // temporal, para depurar
-        // this.cerrarSesion();                  // comentado mientras depuras
+      // Token expirado o inválido
+      if (res.status === 401) {
+        console.warn("⚠️ Token expirado o inválido");
+        this.cerrarSesion();
         throw new Error("Sesión expirada. Inicia sesión de nuevo.");
       }
 
