@@ -1,20 +1,44 @@
 // ============================================================
-//  SCRIPT PRINCIPAL v3 — Backend + Supabase + Motor de Tiempo Laboral
+//  SCRIPT PRINCIPAL v4 — Backend + Supabase + Motor de Tiempo Laboral
 //  Requiere gm-api.js cargado ANTES
-//  El tiempo transcurrido se calcula SIEMPRE a partir de los
-//  timestamps reales guardados en `segmentos` (no en memoria),
-//  por eso sobrevive a recargas / cierre de pestaña.
+//
+//  Novedades v4 (robustez):
+//   1. Planificador central (1 solo intervalo) reemplaza los setTimeout
+//      por pedido: ya no se acumulan ni sobreviven a pausas manuales.
+//   2. Una pausa MANUAL nunca se reanuda sola. Cada segmento guarda
+//      `cierre: "manual" | "auto"` y solo las pausas "auto" se reanudan.
+//   3. Segmentos normalizados al cargar (sin solapes ni inconsistencias).
+//   4. Alerta visual + banner para pedidos con demasiadas horas
+//      laborables abiertas (UMBRAL_ALERTA_H).
+//   5. Al finalizar se puede indicar la HORA REAL DE FIN; los segmentos
+//      se recortan a esa hora (corrige pedidos que se olvidaron cerrar).
+//   6. Tiempo de auxiliares calculado solo sobre los tramos activos.
+//   7. Un solo reloj global (1 s) en vez de un intervalo por pedido.
+//   8. Escape de HTML, anti-duplicados de código y "Eliminar Todos"
+//      protegido (pide escribir ELIMINAR y no borra finalizados).
 // ============================================================
 
 // ── ESTADO GLOBAL ──
 let pedidosActivos = {}; // { id_pedido: { ...datos, segmentos, paused, ... } }
-let timers = {};
-let badgeTimers = {};
+let timers = {};         // (compatibilidad con horasextras.js)
+let badgeTimers = {};    // (compatibilidad con horasextras.js)
 
 const UMBRAL_EQUIPO = 100;
+const UMBRAL_ALERTA_H = 12; // horas laborables abiertas a partir de las cuales se avisa
+const UMBRAL_ALERTA_SEG = UMBRAL_ALERTA_H * 3600;
+
+let soloAntiguos = false;
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
 
 // ============================================================
-//  DÍAS FERIADOS (cliente — igual que antes)
+//  DÍAS FERIADOS (guardados en localStorage de ESTE navegador)
+//  Ojo: si usas varias PCs, deben tener los mismos feriados o el
+//  tiempo calculado diferirá entre ellas.
 // ============================================================
 function cargarFeriados() {
   try {
@@ -50,7 +74,7 @@ function precargarFeriadosRD() {
 }
 
 // ============================================================
-//  PANEL DE FERIADOS — UI (igual que antes)
+//  PANEL DE FERIADOS — UI
 // ============================================================
 function abrirPanelFeriados() {
   let overlay = document.getElementById("modal-feriados-overlay");
@@ -96,8 +120,8 @@ function renderPanelFeriados() {
           <div class="feriado-item" style="display:flex;align-items:center;justify-content:space-between;
                padding:8px 10px;margin-bottom:6px;background:var(--surface2,#1e1e2e);
                border-radius:8px;gap:8px;">
-            <span style="font-size:13px;">📅 <strong>${f}</strong> — ${label}</span>
-            <button class="btn-delete" style="font-size:11px;" onclick="eliminarFeriado('${f}')" title="Eliminar">✕</button>
+            <span style="font-size:13px;">📅 <strong>${esc(f)}</strong> — ${esc(label)}</span>
+            <button class="btn-delete" style="font-size:11px;" onclick="eliminarFeriado('${esc(f)}')" title="Eliminar">✕</button>
           </div>`;
       }).join("");
 
@@ -156,30 +180,17 @@ function eliminarFeriado(fecha) {
 }
 
 // ============================================================
-//  HORARIOS LABORABLES — ahora vienen de la tabla `sacadores`
-//  en Supabase (gestionados desde Sacadores.html), no de objetos
-//  quemados en el código. Se cargan una vez por sesión en
-//  cargarSacadores() y se guardan en SACADORES_CACHE.
+//  HORARIOS LABORABLES — vienen de la tabla `sacadores` (Supabase)
 // ============================================================
 const HORA_ENTRADA_DEFAULT = "08:00:00";
 
-// { "Nombre Sacador": { activo, horario_entrada, salida_lun_jue, salida_viernes,
-//                       salida_sabado, almuerzo_inicio, almuerzo_fin, breaks:[{hora,duracion_min}] } }
 let SACADORES_CACHE = {};
-
-// Nombres de sacadores ACTIVOS — reemplaza a la lista quemada de antes.
-// La llenan dinámicamente cargarSacadores() y poblarSelectsSacadores().
 let TODOS_LOS_SACADORES = [];
+const _sacadoresSinHorario = new Set();
 
-/**
- * Trae los sacadores desde el backend (tabla `sacadores` en Supabase)
- * y llena SACADORES_CACHE + TODOS_LOS_SACADORES + los <select> del DOM.
- * Debe llamarse ANTES de renderizar/pausar pedidos, porque el motor
- * de tiempo laborable depende de estos datos.
- */
 async function cargarSacadores() {
   try {
-    const lista = await GMApi.obtenerSacadores(); // trae todos (activos e inactivos)
+    const lista = await GMApi.obtenerSacadores();
     SACADORES_CACHE = {};
     TODOS_LOS_SACADORES = [];
 
@@ -196,16 +207,12 @@ async function cargarSacadores() {
   }
 }
 
-/**
- * Llena los <select> de sacador en la página de Pedidos con la
- * lista de sacadores activos que vino del backend.
- */
 function poblarSelectsSacadores() {
   const selectPedido = document.getElementById("sacador");
   if (selectPedido) {
     const actual = selectPedido.value;
     selectPedido.innerHTML = '<option value="">Selecciona el sacador</option>' +
-      TODOS_LOS_SACADORES.map(n => `<option value="${n}">${n}</option>`).join("");
+      TODOS_LOS_SACADORES.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
     if (TODOS_LOS_SACADORES.includes(actual)) selectPedido.value = actual;
   }
 
@@ -213,12 +220,20 @@ function poblarSelectsSacadores() {
   if (selectFiltro) {
     const actual = selectFiltro.value;
     selectFiltro.innerHTML = '<option value="">Todos los sacadores</option>' +
-      TODOS_LOS_SACADORES.map(n => `<option value="${n.toLowerCase()}">${n}</option>`).join("");
+      TODOS_LOS_SACADORES.map(n => `<option value="${esc(n.toLowerCase())}">${esc(n)}</option>`).join("");
     selectFiltro.value = actual;
   }
 }
 
+function _avisarSinHorario(sacador) {
+  if (!SACADORES_CACHE[sacador] && !_sacadoresSinHorario.has(sacador)) {
+    _sacadoresSinHorario.add(sacador);
+    console.warn(`⚠️ "${sacador}" no está en la tabla sacadores: se usa el horario por defecto (08:00-18:00).`);
+  }
+}
+
 function getSalidaPersonal(sacador, dia) {
+  _avisarSinHorario(sacador);
   const s = SACADORES_CACHE[sacador];
   if (dia >= 1 && dia <= 4) return s ? s.salida_lun_jue : "18:00:00";
   if (dia === 5) return s ? s.salida_viernes : "17:00:00";
@@ -234,7 +249,6 @@ function getHoraEntrada(sacador) {
 function getBreaksSacador(sacador) {
   const s = SACADORES_CACHE[sacador];
   if (!s || !Array.isArray(s.breaks)) return [];
-  // Normaliza duracion_min (Supabase) -> durMin (usado en el resto del motor)
   return s.breaks.map(b => ({ hora: b.hora, durMin: b.duracion_min }));
 }
 
@@ -254,14 +268,20 @@ function hhmmssASeg(str) {
   return h * 3600 + m * 60 + (s || 0);
 }
 
+function aMs(v) {
+  return typeof v === "number" ? v : new Date(v).getTime();
+}
+
 /**
- * Devuelve los rangos [inicioSeg, finSeg] laborables del sacador
- * para la fecha dada. Delega en getRangosConExtras si horasextras.js
- * está cargado (para horarios especiales / domingos habilitados).
+ * Rangos [inicioSeg, finSeg] laborables del sacador para la fecha dada.
+ * Delega en getRangosConExtras (horasextras.js) si está cargado.
  */
 function getRangosLaboralesDia(fecha, sacador) {
   const dia = fecha.getDay();
-  if (dia === 0) return [];
+  if (dia === 0) {
+    // Domingo: solo cuenta si horasextras.js habilita un día especial
+    return typeof getRangosConExtras === "function" ? getRangosConExtras(fecha, sacador, []) : [];
+  }
   if (esFeriado(fecha)) return [];
 
   const salidaStr = getSalidaPersonal(sacador, dia);
@@ -274,10 +294,7 @@ function getRangosLaboralesDia(fecha, sacador) {
 
   const almuerzo = getAlmuerzoSacador(sacador);
   if (dia !== 6 && almuerzo) {
-    pausas.push({
-      inicio: hhmmssASeg(almuerzo.pausa),
-      fin: hhmmssASeg(almuerzo.reanuda)
-    });
+    pausas.push({ inicio: hhmmssASeg(almuerzo.pausa), fin: hhmmssASeg(almuerzo.reanuda) });
   }
 
   const breaksSacador = getBreaksSacador(sacador);
@@ -285,9 +302,7 @@ function getRangosLaboralesDia(fecha, sacador) {
     for (const b of breaksSacador) {
       const ini = hhmmssASeg(b.hora);
       const fin = ini + b.durMin * 60;
-      if (ini >= entrada && fin <= salida) {
-        pausas.push({ inicio: ini, fin });
-      }
+      if (ini >= entrada && fin <= salida) pausas.push({ inicio: ini, fin });
     }
   }
 
@@ -296,30 +311,30 @@ function getRangosLaboralesDia(fecha, sacador) {
   const rangos = [];
   let cursor = entrada;
   for (const p of pausas) {
-    if (p.inicio > cursor && p.inicio < salida) {
-      rangos.push([cursor, Math.min(p.inicio, salida)]);
-    }
+    if (p.inicio > cursor && p.inicio < salida) rangos.push([cursor, Math.min(p.inicio, salida)]);
     cursor = Math.max(cursor, p.fin);
   }
   if (cursor < salida) rangos.push([cursor, salida]);
 
-  if (typeof getRangosConExtras === "function") {
-    return getRangosConExtras(fecha, sacador, rangos);
-  }
+  if (typeof getRangosConExtras === "function") return getRangosConExtras(fecha, sacador, rangos);
   return rangos;
 }
 
+function estaDentroHorario(sacador, fecha) {
+  const rangos = getRangosLaboralesDia(fecha, sacador);
+  const seg = fecha.getHours() * 3600 + fecha.getMinutes() * 60 + fecha.getSeconds();
+  return rangos.some(([a, b]) => seg >= a && seg < b);
+}
+
 function calcularSegLaborables(sacador, desdeMs, hastaMs) {
-  if (hastaMs <= desdeMs) return 0;
+  if (!(hastaMs > desdeMs)) return 0;
 
   let total = 0;
   const desde = new Date(desdeMs);
   const hasta = new Date(hastaMs);
 
-  const inicioDia = new Date(desde);
-  inicioDia.setHours(0, 0, 0, 0);
-
-  let cursor = new Date(inicioDia);
+  const cursor = new Date(desde);
+  cursor.setHours(0, 0, 0, 0);
 
   while (cursor < hasta) {
     const finDia = new Date(cursor);
@@ -341,9 +356,7 @@ function calcularSegLaborables(sacador, desdeMs, hastaMs) {
       const solapInicio = Math.max(rInicioMs, limInf.getTime());
       const solapFin = Math.min(rFinMs, limSup.getTime());
 
-      if (solapFin > solapInicio) {
-        total += Math.floor((solapFin - solapInicio) / 1000);
-      }
+      if (solapFin > solapInicio) total += Math.floor((solapFin - solapInicio) / 1000);
     }
 
     cursor.setDate(cursor.getDate() + 1);
@@ -353,30 +366,90 @@ function calcularSegLaborables(sacador, desdeMs, hastaMs) {
   return total;
 }
 
+// ── Utilidades de segmentos ──────────────────────────────────
+
 /**
- * Calcula el tiempo laborable (ms) de un pedido a partir de sus
- * segmentos reales (inicio/fin en ISO string o ms). Cada segmento
- * se recorta automáticamente contra almuerzo/breaks/feriados/fuera
- * de horario vía calcularSegLaborables — por eso NO importa si la
- * pestaña estuvo cerrada durante ese tramo, el cálculo es correcto
- * igual con solo recargar la página.
+ * Deja la lista de segmentos coherente: ordenada, sin solapes, solo el
+ * último puede estar abierto, y consistente con el estado pausado/activo.
+ */
+function normalizarSegmentos(segs, horaInicio, paused, nowMs) {
+  let lista = Array.isArray(segs)
+    ? segs.filter(s => s && s.inicio != null && !isNaN(aMs(s.inicio))).map(s => ({ ...s }))
+    : [];
+
+  if (lista.length === 0) {
+    lista = [{ inicio: horaInicio, fin: paused ? horaInicio : null, cierre: "manual" }];
+  }
+
+  lista.sort((a, b) => aMs(a.inicio) - aMs(b.inicio));
+
+  for (let i = 0; i < lista.length - 1; i++) {
+    const s = lista[i], sig = lista[i + 1];
+    if (s.fin == null || aMs(s.fin) > aMs(sig.inicio)) s.fin = sig.inicio;
+  }
+  for (const s of lista) {
+    if (s.fin != null && aMs(s.fin) < aMs(s.inicio)) s.fin = s.inicio;
+  }
+
+  const ult = lista[lista.length - 1];
+  if (paused && ult.fin == null) {
+    console.warn("⚠️ Pedido pausado con segmento abierto; se cierra ahora.");
+    ult.fin = new Date(nowMs).toISOString();
+    ult.cierre = ult.cierre || "manual";
+  }
+  if (!paused && ult.fin != null) {
+    lista.push({ inicio: new Date(nowMs).toISOString(), fin: null });
+  }
+  return lista;
+}
+
+/** Recorta los segmentos para que terminen a más tardar en finMs. */
+function recortarSegmentos(segs, finMs) {
+  return segs
+    .map(s => ({ ...s }))
+    .filter(s => aMs(s.inicio) < finMs)
+    .map(s => {
+      if (s.fin == null || aMs(s.fin) > finMs) s.fin = new Date(finMs).toISOString();
+      return s;
+    });
+}
+
+function calcularMsSegmentos(sacador, segs, nowMs) {
+  let totalSeg = 0;
+  for (const seg of segs) {
+    const inicioMs = aMs(seg.inicio);
+    const finMs = seg.fin == null ? nowMs : aMs(seg.fin);
+    totalSeg += calcularSegLaborables(sacador, inicioMs, finMs);
+  }
+  return totalSeg * 1000;
+}
+
+function calcularSegAuxiliar(nombre, segs, joinedMs) {
+  let t = 0;
+  for (const s of segs) {
+    const ini = Math.max(aMs(s.inicio), joinedMs);
+    const fin = s.fin == null ? Date.now() : aMs(s.fin);
+    if (fin > ini) t += calcularSegLaborables(nombre, ini, fin);
+  }
+  return t;
+}
+
+function ultimoCierre(data) {
+  const u = data.segmentos && data.segmentos[data.segmentos.length - 1];
+  // Si no sabemos quién pausó, se trata como manual (nunca se reanuda solo).
+  return u && u.fin != null ? (u.cierre || "manual") : null;
+}
+
+/**
+ * Tiempo laborable (ms) de un pedido a partir de sus segmentos reales.
  */
 function calcularElapsedMs(data, nowMs) {
   if (data.estatus === "Finalizado") return data.elapsedMsFinal || 0;
 
   if (!data.segmentos || data.segmentos.length === 0) {
-    data.segmentos = [{ inicio: data.hora_inicio, fin: data.paused ? (data.hora_inicio) : null }];
+    data.segmentos = [{ inicio: data.hora_inicio, fin: data.paused ? data.hora_inicio : null }];
   }
-
-  let totalSeg = 0;
-  for (const seg of data.segmentos) {
-    const inicioMs = typeof seg.inicio === "number" ? seg.inicio : new Date(seg.inicio).getTime();
-    const finMs = seg.fin === null || seg.fin === undefined
-      ? nowMs
-      : (typeof seg.fin === "number" ? seg.fin : new Date(seg.fin).getTime());
-    totalSeg += calcularSegLaborables(data.sacador, inicioMs, finMs);
-  }
-  return totalSeg * 1000;
+  return calcularMsSegmentos(data.sacador, data.segmentos, nowMs);
 }
 
 // ============================================================
@@ -398,8 +471,14 @@ function formatTime(totalSeconds) {
 
 function formatearFecha(timestamp) {
   const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return "—";
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ` +
     `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function toLocalInput(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // ============================================================
@@ -451,7 +530,7 @@ async function autenticar() {
     loadingEl.style.display = "block";
     btnEl.disabled = true;
 
-    const { token, usuario } = await GMApi.login(email, password);
+    const { usuario } = await GMApi.login(email, password);
 
     console.log("✅ Autenticación exitosa:", usuario.nombre);
     loadingEl.style.display = "none";
@@ -477,29 +556,14 @@ async function autenticar() {
 function cerrarSesion() {
   if (confirm("¿Cerrar sesión?")) {
     mostrarToast("Sesión cerrada. Hasta pronto 👋", "info");
-    setTimeout(() => {
-      GMApi.cerrarSesion();
-    }, 800);
+    setTimeout(() => { GMApi.cerrarSesion(); }, 800);
   }
 }
 
 // ============================================================
 //  CARGAR PEDIDOS DEL BACKEND
-// ============================================================
-// ============================================================
-//  PARCHE 1 — script.js
-//  Reemplaza la función cargarPedidosDelBackend() completa por esta.
-//
-//  Qué corrige:
-//   - Antes pedía solo "En Proceso", "Pausado" y "Finalizado". Los pedidos con
-//     estatus "En Proceso - Equipo" nunca se pedían, así que no aparecían.
-//     Ahora se hace UNA consulta sin filtro y llegan todos.
-//   - Antes, si UN pedido traía un campo vacío (por ejemplo sacador o
-//     numero_pedido en null), el ciclo se rompía y los demás no se mostraban.
-//     Ahora cada pedido se muestra por separado y el que falla se reporta
-//     en la consola con su número.
-//   - Antes borraba todo el #task-list, incluido el #empty-state. Ahora solo
-//     borra las tarjetas.
+//  (Recordatorio PARCHE 2 en gm-api.js, método request():
+//   if (res.status === 401 && !path.startsWith("/api/auth/login")) {  )
 // ============================================================
 async function cargarPedidosDelBackend() {
   try {
@@ -523,6 +587,10 @@ async function cargarPedidosDelBackend() {
       }
     }
 
+    iniciarRelojGlobal();
+    await planificadorTick(true); // reconcilia pausas/reanudaciones perdidas
+    refrescarTimers();
+
     actualizarStats();
     aplicarFiltro();
 
@@ -535,33 +603,18 @@ async function cargarPedidosDelBackend() {
   }
 }
 
-// ============================================================
-//  PARCHE 2 — gm-api.js
-//  En el método request(), cambia esta línea:
-//
-//      if (res.status === 401) {
-//
-//  por esta:
-//
-//      if (res.status === 401 && !path.startsWith("/api/auth/login")) {
-//
-//  Así una contraseña incorrecta ya no recarga la página: el mensaje de
-//  error llega al formulario de login.
-// ============================================================
-
-/**
- * Renderiza un pedido individual desde el backend.
- * Usa los `segmentos` reales que vienen de Supabase para que el
- * tiempo laborable se recalcule correctamente sin importar cuánto
- * tiempo estuvo la página cerrada.
- */
 async function renderizarPedido(pedido) {
   const { id, numero_pedido, sacador, cantidad_referencias, hora_inicio, hora_fin,
     estatus, auxiliares, tiene_equipo, segmentos, tiempo_total_segundos } = pedido;
 
-  let segmentosLocales = Array.isArray(segmentos) && segmentos.length > 0
-    ? segmentos
-    : [{ inicio: hora_inicio, fin: estatus === "Finalizado" ? hora_fin : null }];
+  const nowMs = Date.now();
+  const paused = estatus === "Pausado";
+
+  const segmentosLocales = estatus === "Finalizado"
+    ? (Array.isArray(segmentos) && segmentos.length > 0
+        ? segmentos
+        : [{ inicio: hora_inicio, fin: hora_fin }])
+    : normalizarSegmentos(segmentos, hora_inicio, paused, nowMs);
 
   pedidosActivos[id] = {
     id,
@@ -574,8 +627,11 @@ async function renderizarPedido(pedido) {
     auxiliares: auxiliares || [],
     tiene_equipo: tiene_equipo || false,
     segmentos: segmentosLocales,
-    paused: estatus === "Pausado",
-    elapsedMsFinal: estatus === "Finalizado" ? (tiempo_total_segundos || 0) * 1000 : 0
+    paused,
+    elapsedMsFinal: estatus === "Finalizado" ? (tiempo_total_segundos || 0) * 1000 : 0,
+    _dentro: estatus === "Finalizado" ? undefined : estaDentroHorario(sacador, new Date()),
+    _alerta: false,
+    _ocupado: false
   };
 
   crearTarjeta(pedido);
@@ -594,9 +650,6 @@ async function renderizarPedido(pedido) {
   } else {
     iniciarTimer(id);
     iniciarBadgeTimer(id);
-    if (!pedidosActivos[id].paused) {
-      programarPausas(id, sacador, new Date());
-    }
   }
 }
 
@@ -611,6 +664,14 @@ async function agregarPedido() {
 
   if (!codigo || !sacador || isNaN(cantidad) || cantidad <= 0) {
     mostrarToast("⚠️ Completa todos los campos correctamente.", "warn");
+    return;
+  }
+
+  const duplicado = Object.values(pedidosActivos).some(
+    p => p.estatus !== "Finalizado" && String(p.numero_pedido).toLowerCase() === codigo.toLowerCase()
+  );
+  if (duplicado) {
+    mostrarToast(`🚫 Ya existe un pedido abierto con el código ${codigo}.`, "error");
     return;
   }
 
@@ -653,9 +714,9 @@ function _abrirModalEquipoNuevo(codigo, sacador, cantidad) {
   const iniciales = sacador.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
   document.getElementById("equipo-body").innerHTML = `
     <div class="equipo-lider-preview">
-      <div class="equipo-lider-avatar">${iniciales}</div>
+      <div class="equipo-lider-avatar">${esc(iniciales)}</div>
       <div class="equipo-lider-info">
-        <div class="equipo-lider-name">${sacador}</div>
+        <div class="equipo-lider-name">${esc(sacador)}</div>
         <div class="equipo-lider-badge">👑 Líder del equipo</div>
       </div>
     </div>
@@ -686,7 +747,7 @@ function _agregarFilaAuxNueva() {
 
   const opciones = TODOS_LOS_SACADORES
     .filter(s => s !== _pendientePedidoNuevo.sacador)
-    .map(s => `<option value="${s}">${s}</option>`)
+    .map(s => `<option value="${esc(s)}">${esc(s)}</option>`)
     .join("");
 
   fila.innerHTML = `
@@ -755,9 +816,6 @@ function _rechazarEquipoNuevo() {
   _pendientePedidoNuevo = null;
 }
 
-/**
- * Crea un pedido en el backend
- */
 async function _crearPedidoEnBackend(codigo, sacador, cantidad, tieneEquipo, auxiliares) {
   const ahora = new Date().toISOString();
 
@@ -784,11 +842,8 @@ async function _crearPedidoEnBackend(codigo, sacador, cantidad, tieneEquipo, aux
 
 // ============================================================
 //  PAUSAR / REANUDAR
-//  Cierra/abre un segmento real y lo persiste en el backend, así
-//  el estado sobrevive a un refresh incluso si el auto-pause
-//  programado nunca llegó a dispararse (pestaña cerrada, etc.) —
-//  y aunque eso pase, calcularSegLaborables igual descuenta el
-//  tramo no laborable automáticamente.
+//  tipo: "manual" (botón del usuario) | "auto" (planificador)
+//  Solo las pausas "auto" son reanudadas por el planificador.
 // ============================================================
 async function _persistirSegmentos(id, estatusNuevo) {
   const data = pedidosActivos[id];
@@ -800,14 +855,21 @@ async function _persistirSegmentos(id, estatusNuevo) {
 
 async function pausar(id, tipo = "manual") {
   const data = pedidosActivos[id];
-  if (!data || data.paused || data.estatus === "Finalizado") return;
+  if (!data || data.paused || data.estatus === "Finalizado") return false;
 
   const ahora = new Date().toISOString();
   const ultimo = data.segmentos[data.segmentos.length - 1];
-  if (ultimo && ultimo.fin === null) ultimo.fin = ahora;
+  const finPrev = ultimo ? ultimo.fin : null;
+  const cierrePrev = ultimo ? ultimo.cierre : undefined;
+
+  if (ultimo && ultimo.fin == null) {
+    ultimo.fin = ahora;
+    ultimo.cierre = tipo === "manual" ? "manual" : "auto";
+  }
 
   data.paused = true;
   data.estatus = "Pausado";
+  data._ocupado = true;
 
   try {
     await _persistirSegmentos(id, "Pausado");
@@ -819,25 +881,35 @@ async function pausar(id, tipo = "manual") {
     }
 
     renderBadgePausa(id);
+    actualizarTimerCard(id, Date.now());
     actualizarStats();
     if (tipo === "manual") mostrarToast("⏸ Pedido pausado", "info");
+    return true;
   } catch (err) {
     console.error("❌ Error pausando pedido:", err);
     data.paused = false;
     data.estatus = "En Proceso";
-    if (ultimo) ultimo.fin = null;
-    mostrarToast("❌ Error al pausar pedido.", "error");
+    if (ultimo) {
+      ultimo.fin = finPrev;
+      if (cierrePrev === undefined) delete ultimo.cierre; else ultimo.cierre = cierrePrev;
+    }
+    data._reintento = Date.now() + 60000;
+    if (tipo === "manual") mostrarToast("❌ Error al pausar pedido.", "error");
+    return false;
+  } finally {
+    data._ocupado = false;
   }
 }
 
-async function reanudar(id) {
+async function reanudar(id, tipo = "manual") {
   const data = pedidosActivos[id];
-  if (!data || !data.paused || data.estatus === "Finalizado") return;
+  if (!data || !data.paused || data.estatus === "Finalizado") return false;
 
   const ahora = new Date().toISOString();
   data.segmentos.push({ inicio: ahora, fin: null });
   data.paused = false;
   data.estatus = "En Proceso";
+  data._ocupado = true;
 
   try {
     await _persistirSegmentos(id, "En Proceso");
@@ -849,39 +921,95 @@ async function reanudar(id) {
     }
 
     iniciarTimer(id);
-    programarPausas(id, data.sacador, new Date());
     renderBadgePausa(id);
     actualizarStats();
-    mostrarToast("▶ Pedido reanudado", "info");
+    if (tipo === "manual") mostrarToast("▶ Pedido reanudado", "info");
+    return true;
   } catch (err) {
     console.error("❌ Error reanudando pedido:", err);
     data.segmentos.pop();
     data.paused = true;
     data.estatus = "Pausado";
-    mostrarToast("❌ Error al reanudar pedido.", "error");
+    data._reintento = Date.now() + 60000;
+    if (tipo === "manual") mostrarToast("❌ Error al reanudar pedido.", "error");
+    return false;
+  } finally {
+    data._ocupado = false;
   }
 }
 
 async function pausarTodos() {
   for (const id in pedidosActivos) {
     const data = pedidosActivos[id];
-    if (!data.paused && data.estatus !== "Finalizado") {
-      await pausar(id, "manual");
-    }
+    if (!data.paused && data.estatus !== "Finalizado") await pausar(id, "manual");
   }
 }
 
 async function reanudarTodos() {
   for (const id in pedidosActivos) {
     const data = pedidosActivos[id];
-    if (data.paused && data.estatus !== "Finalizado") {
-      await reanudar(id);
-    }
+    if (data.paused && data.estatus !== "Finalizado") await reanudar(id, "manual");
   }
 }
 
 // ============================================================
-//  PAUSAS AUTOMÁTICAS PROGRAMADAS (almuerzo / breaks / salida)
+//  PLANIFICADOR CENTRAL (reemplaza los setTimeout por pedido)
+//  - Pausa automática cuando termina el horario (almuerzo, break, salida)
+//  - Reanuda automáticamente SOLO lo que pausó el propio planificador
+//  - Se re-evalúa al volver a la pestaña, así que no depende de que
+//    estuviera abierta cuando ocurrió el evento.
+// ============================================================
+let relojGlobal = null;
+let planificador = null;
+let _planificando = false;
+let _tickBadge = 0;
+
+function iniciarRelojGlobal() {
+  if (!relojGlobal) relojGlobal = setInterval(refrescarTimers, 1000);
+  if (!planificador) planificador = setInterval(() => planificadorTick(false), 15000);
+}
+
+async function planificadorTick(inicial = false) {
+  if (_planificando) return;
+  _planificando = true;
+  try {
+    const ahora = new Date();
+    for (const id of Object.keys(pedidosActivos)) {
+      const d = pedidosActivos[id];
+      if (!d || d.estatus === "Finalizado" || d._ocupado) continue;
+      if (d._reintento && Date.now() < d._reintento) continue;
+
+      const dentro = estaDentroHorario(d.sacador, ahora);
+      const antes = d._dentro;
+      d._dentro = dentro;
+
+      if (!d.paused) {
+        // Pausa solo en la transición dentro → fuera (o al cargar la página)
+        if (!dentro && (inicial || antes === true)) await pausar(id, "auto");
+      } else if (dentro && ultimoCierre(d) === "auto") {
+        await reanudar(id, "auto");
+      }
+    }
+  } finally {
+    _planificando = false;
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    refrescarTimers();
+    planificadorTick(false);
+  }
+});
+
+// Compatibilidad: horasextras.js u otros módulos pueden seguir llamándola.
+// El planificador central ya cubre todo, así que no programa nada por pedido.
+function programarPausas(id, sacador, now) {
+  planificadorTick(false);
+}
+
+// ============================================================
+//  BADGE DE PRÓXIMA PAUSA
 // ============================================================
 function addDays(date, d) {
   const nd = new Date(date);
@@ -891,7 +1019,7 @@ function addDays(date, d) {
 
 function getFutureTime(date, timeStr) {
   const [h, m, s] = timeStr.split(":").map(Number);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m, s);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m, s || 0);
 }
 
 function diasHastaProximoLaborable(desde) {
@@ -904,40 +1032,6 @@ function diasHastaProximoLaborable(desde) {
   return 1;
 }
 
-function programarPausas(id, sacador, now) {
-  const dia = now.getDay();
-
-  const almuerzo = getAlmuerzoSacador(sacador);
-  if (dia !== 6 && almuerzo) {
-    const p1 = getFutureTime(now, almuerzo.pausa);
-    const r1 = getFutureTime(now, almuerzo.reanuda);
-    if (p1 > now) setTimeout(() => pausar(id, "almuerzo"), p1 - now);
-    if (r1 > now) setTimeout(() => reanudar(id), r1 - now);
-  }
-
-  const breaksSacador = getBreaksSacador(sacador);
-  if (dia >= 1 && dia <= 4 && breaksSacador.length > 0) {
-    for (const b of breaksSacador) {
-      const pBreak = getFutureTime(now, b.hora);
-      const rBreak = new Date(pBreak.getTime() + b.durMin * 60 * 1000);
-      if (pBreak > now) setTimeout(() => pausar(id, "break"), pBreak - now);
-      if (rBreak > now) setTimeout(() => reanudar(id), rBreak - now);
-    }
-  }
-
-  const salidaStr = getSalidaPersonal(sacador, dia);
-  if (salidaStr) {
-    const pausaSalida = getFutureTime(now, salidaStr);
-    const diasHasta = diasHastaProximoLaborable(now);
-    const reanuda = getFutureTime(addDays(now, diasHasta), getHoraEntrada(sacador));
-    if (pausaSalida > now) setTimeout(() => pausar(id, "salida"), pausaSalida - now);
-    if (reanuda > now) setTimeout(() => reanudar(id), reanuda - now);
-  }
-}
-
-// ============================================================
-//  BADGE DE PRÓXIMA PAUSA
-// ============================================================
 function calcularProximaPausa(sacador, now) {
   const eventos = [];
   const dia = now.getDay();
@@ -987,26 +1081,28 @@ function renderBadgePausa(id) {
   badgeEl.style.display = "inline-flex";
 }
 
+// Compatibilidad: el refresco real lo hace el reloj global cada 30 s.
 function iniciarBadgeTimer(id) {
-  if (badgeTimers[id]) clearInterval(badgeTimers[id]);
-  badgeTimers[id] = setInterval(() => renderBadgePausa(id), 60000);
   renderBadgePausa(id);
 }
 
 // ============================================================
 //  ELIMINAR
 // ============================================================
+function _limpiarPedidoLocal(id) {
+  clearInterval(timers[id]);
+  clearInterval(badgeTimers[id]);
+  delete timers[id];
+  delete badgeTimers[id];
+  delete pedidosActivos[id];
+}
+
 async function eliminar(id) {
   if (!confirm("¿Eliminar este pedido?")) return;
 
   try {
     await GMApi.eliminarPedido(id);
-
-    clearInterval(timers[id]);
-    clearInterval(badgeTimers[id]);
-    delete timers[id];
-    delete badgeTimers[id];
-    delete pedidosActivos[id];
+    _limpiarPedidoLocal(id);
 
     const card = document.getElementById(`card-${id}`);
     if (card) {
@@ -1026,71 +1122,130 @@ async function eliminar(id) {
 }
 
 async function eliminarTodos() {
-  if (!confirm("¿Eliminar TODOS los pedidos? Esta acción no se puede deshacer.")) return;
+  const ids = Object.keys(pedidosActivos).filter(id => pedidosActivos[id].estatus !== "Finalizado");
+  if (ids.length === 0) {
+    mostrarToast("ℹ️ No hay pedidos abiertos para eliminar.", "info");
+    return;
+  }
 
-  const ids = Object.keys(pedidosActivos);
+  const resp = prompt(
+    `Vas a eliminar ${ids.length} pedido(s) abiertos (los finalizados NO se tocan).\n` +
+    `Esta acción no se puede deshacer. Escribe ELIMINAR para confirmar:`
+  );
+  if (resp === null || resp.trim() !== "ELIMINAR") {
+    mostrarToast("Operación cancelada.", "info");
+    return;
+  }
+
+  let borrados = 0;
   for (const id of ids) {
     try {
       await GMApi.eliminarPedido(id);
-      clearInterval(timers[id]);
-      clearInterval(badgeTimers[id]);
-      delete timers[id];
-      delete badgeTimers[id];
-      delete pedidosActivos[id];
-
+      _limpiarPedidoLocal(id);
       const card = document.getElementById(`card-${id}`);
       if (card) card.remove();
+      borrados++;
     } catch (err) {
       console.error(`❌ Error eliminando pedido ${id}:`, err);
     }
   }
 
-  pedidosActivos = {};
-  timers = {};
-  badgeTimers = {};
   actualizarStats();
   aplicarFiltro();
-  mostrarToast("🗑 Todos los pedidos fueron eliminados", "warn");
+  mostrarToast(`🗑 ${borrados} de ${ids.length} pedidos eliminados`, "warn");
 }
 
 // ============================================================
-//  TIMER — recalcula siempre desde los segmentos reales
+//  TIMERS — un solo reloj global, siempre desde los segmentos reales
 // ============================================================
 function iniciarTimer(id) {
-  if (timers[id]) clearInterval(timers[id]);
+  iniciarRelojGlobal();
+  actualizarTimerCard(id, Date.now());
+}
 
-  timers[id] = setInterval(() => {
-    const data = pedidosActivos[id];
-    if (!data || data.estatus === "Finalizado") {
-      clearInterval(timers[id]);
-      return;
-    }
+function actualizarTimerCard(id, nowMs) {
+  const data = pedidosActivos[id];
+  if (!data || data.estatus === "Finalizado") return;
 
-    const elapsedMs = calcularElapsedMs(data, Date.now());
-    const timerEl = document.getElementById(`timer-${id}`);
-    if (timerEl) {
-      timerEl.textContent = formatTime(Math.floor(elapsedMs / 1000));
+  const elapsedSeg = Math.floor(calcularElapsedMs(data, nowMs) / 1000);
+  const timerEl = document.getElementById(`timer-${id}`);
+  if (timerEl) timerEl.textContent = formatTime(elapsedSeg);
+
+  const alerta = elapsedSeg >= UMBRAL_ALERTA_SEG;
+  data._alerta = alerta;
+
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.dataset.alerta = alerta ? "1" : "0";
+  if (timerEl) timerEl.classList.toggle("alerta", alerta);
+
+  const badge = document.getElementById(`badge-alerta-${id}`);
+  if (badge) {
+    if (alerta) {
+      badge.textContent = `⚠ Revisar · ${Math.floor(elapsedSeg / 3600)}h laborables`;
+      badge.title = "Lleva mucho tiempo abierto. Si ya terminó, finalízalo indicando la hora real de fin.";
+      badge.style.display = "inline-flex";
+    } else {
+      badge.style.display = "none";
     }
-  }, 500);
+  }
+}
+
+function refrescarTimers() {
+  const now = Date.now();
+  let antiguos = 0;
+  for (const id in pedidosActivos) {
+    const d = pedidosActivos[id];
+    if (d.estatus === "Finalizado") continue;
+    actualizarTimerCard(id, now);
+    if (d._alerta) antiguos++;
+  }
+
+  actualizarAlertaGlobal(antiguos);
+
+  _tickBadge = (_tickBadge + 1) % 30;
+  if (_tickBadge === 0) {
+    for (const id in pedidosActivos) renderBadgePausa(id);
+  }
+}
+
+function actualizarAlertaGlobal(n) {
+  const el = document.getElementById("alerta-antiguos");
+  if (!el) return;
+  el.style.display = n > 0 ? "flex" : "none";
+  const txt = document.getElementById("alerta-antiguos-texto");
+  if (txt) {
+    txt.textContent = `${n} pedido${n > 1 ? "s" : ""} acumula${n > 1 ? "n" : ""} más de ${UMBRAL_ALERTA_H} h laborables abiertos. ` +
+      `Si ya terminaron, finalízalos indicando su hora real de fin.`;
+  }
+}
+
+function filtrarAntiguos() {
+  soloAntiguos = true;
+  aplicarFiltro();
 }
 
 // ============================================================
 //  STATS BAR
 // ============================================================
 function actualizarStats() {
-  let activos = 0, pausados = 0, finalizados = 0;
+  let activos = 0, pausados = 0, finalizados = 0, hoy = 0;
+  const h = new Date();
 
   for (const id in pedidosActivos) {
     const d = pedidosActivos[id];
     if (d.estatus === "Finalizado") finalizados++;
     else if (d.estatus === "Pausado") pausados++;
     else activos++;
+
+    const ini = new Date(d.hora_inicio);
+    if (ini.getFullYear() === h.getFullYear() && ini.getMonth() === h.getMonth() && ini.getDate() === h.getDate()) hoy++;
   }
 
   const el = id => document.getElementById(id);
   if (el("stat-activos")) el("stat-activos").textContent = activos;
   if (el("stat-pausados")) el("stat-pausados").textContent = pausados;
   if (el("stat-finalizados")) el("stat-finalizados").textContent = finalizados;
+  if (el("stat-total")) el("stat-total").textContent = hoy;
 }
 
 // ============================================================
@@ -1102,26 +1257,23 @@ function crearTarjeta(pedido) {
   const task = document.createElement("div");
   task.className = "task";
   task.id = `card-${id}`;
-  task.dataset.codigo = numero_pedido.toLowerCase();
-  task.dataset.sacador = sacador.toLowerCase();
+  task.dataset.codigo = String(numero_pedido ?? "").toLowerCase();
+  task.dataset.sacador = String(sacador ?? "").toLowerCase();
+  task.dataset.alerta = "0";
 
-  if (tiene_equipo && auxiliares && auxiliares.length > 0) {
-    task.classList.add("en-equipo");
-  }
-
-  if (estatus === "Finalizado") {
-    task.classList.add("finalizado");
-  }
+  if (tiene_equipo && auxiliares && auxiliares.length > 0) task.classList.add("en-equipo");
+  if (estatus === "Finalizado") task.classList.add("finalizado");
 
   task.innerHTML = `
     <div class="task-header">
-      <div class="task-code">#${numero_pedido}</div>
+      <div class="task-code">#${esc(numero_pedido)}</div>
       <button class="btn-delete" onclick="eliminar('${id}')" title="Eliminar">✕</button>
     </div>
-    <div class="task-sacador">${sacador}</div>
+    <div class="task-sacador">${esc(sacador)}</div>
     <div class="task-meta">
-      <span class="meta-item">📦 <strong>${cantidad_referencias}</strong> productos</span>
+      <span class="meta-item">📦 <strong>${esc(cantidad_referencias)}</strong> productos</span>
       <span class="badge-pausa" id="badge-pausa-${id}" style="display:none;"></span>
+      <span class="badge-alerta" id="badge-alerta-${id}" style="display:none;"></span>
     </div>
     <div id="times-wrap-${id}" class="task-times">
       <div class="time-row">
@@ -1144,8 +1296,7 @@ function crearTarjeta(pedido) {
     </div>
   `;
 
-  const taskList = document.getElementById("task-list");
-  taskList.appendChild(task);
+  document.getElementById("task-list").appendChild(task);
 
   if (estatus === "Pausado") {
     const btn = task.querySelector(".btn-pause");
@@ -1269,7 +1420,7 @@ function _actualizarSeccionEquipo(id) {
     return `
       <div class="task-team-member">
         <span class="member-role auxiliar">Aux</span>
-        <div class="member-info"><span>${nombre}</span>${joined}</div>
+        <div class="member-info"><span>${esc(nombre)}</span>${joined}</div>
       </div>`;
   }).join("");
 
@@ -1280,7 +1431,7 @@ function _actualizarSeccionEquipo(id) {
     <div class="task-team-member">
       <span class="member-role lider">👑 Líder</span>
       <div class="member-info">
-        <span>${lider}</span>
+        <span>${esc(lider)}</span>
         <span class="member-joined">Inicio: ${formatearFecha(data.hora_inicio)}</span>
       </div>
     </div>
@@ -1302,7 +1453,7 @@ function _actualizarSeccionEquipo(id) {
 }
 
 // ============================================================
-//  MODAL FINALIZAR
+//  MODAL FINALIZAR (con ajuste de hora real de fin)
 // ============================================================
 let modalId = null;
 let modalStep = 1;
@@ -1323,6 +1474,40 @@ function abrirModalFinalizar(id) {
 function cerrarModal() {
   document.getElementById("modal-overlay").classList.remove("open");
   modalId = null;
+}
+
+/** Lee el campo "hora real de fin". Devuelve {ms, ajustado} o {error}. */
+function obtenerFinElegidoMs(data) {
+  const el = document.getElementById("modal-fin-real");
+  if (!el || !el.value) return { ms: Date.now(), ajustado: false };
+
+  const ms = new Date(el.value).getTime();
+  if (isNaN(ms)) return { error: "Fecha inválida." };
+  if (ms <= aMs(data.hora_inicio)) return { error: "El fin debe ser posterior al inicio del pedido." };
+  if (ms > Date.now()) return { error: "El fin no puede estar en el futuro." };
+  return { ms, ajustado: true };
+}
+
+function actualizarResumenFin() {
+  const data = pedidosActivos[modalId];
+  if (!data) return;
+
+  const errEl = document.getElementById("modal-fin-error");
+  const r = obtenerFinElegidoMs(data);
+  if (r.error) {
+    if (errEl) { errEl.textContent = r.error; errEl.classList.add("visible"); }
+    return;
+  }
+  if (errEl) errEl.classList.remove("visible");
+
+  const segs = r.ajustado ? recortarSegmentos(data.segmentos, r.ms) : data.segmentos;
+  const seg = Math.floor(calcularMsSegmentos(data.sacador, segs, r.ms) / 1000);
+  const cant = modalRespuestas.cantidad;
+
+  const tEl = document.getElementById("res-tiempo");
+  const pEl = document.getElementById("res-tpp");
+  if (tEl) tEl.textContent = formatTime(seg);
+  if (pEl) pEl.textContent = cant > 0 ? formatTime(Math.floor(seg / cant)) : "—";
 }
 
 function renderModalStep(step) {
@@ -1374,26 +1559,44 @@ function renderModalStep(step) {
     const cantSacada = modalRespuestas.cantidad;
     const porcentaje = Math.round((cantSacada / data.cantidad_referencias) * 100);
     const tpp = cantSacada > 0 ? formatTime(Math.floor(elapsedSeg / cantSacada)) : "—";
+    const alerta = elapsedSeg >= UMBRAL_ALERTA_SEG;
 
     const equipoRow = data.tiene_equipo && data.auxiliares && data.auxiliares.length > 0
       ? `<div class="summary-row">
            <span class="summary-key">Equipo</span>
            <span class="summary-val" style="color:var(--team);font-size:12px;">
-             ${[data.sacador, ...data.auxiliares.map(a => typeof a === "string" ? a : a.nombre)].join(", ")}
+             ${esc([data.sacador, ...data.auxiliares.map(a => typeof a === "string" ? a : a.nombre)].join(", "))}
            </span>
          </div>` : "";
 
+    const avisoAlerta = alerta
+      ? `<p class="modal-hint" style="color:#ffb454;margin:10px 0 4px;">
+           ⚠ Este pedido acumula ${formatTime(elapsedSeg)} de tiempo laborable. Si ya había terminado antes,
+           indica abajo la hora real de fin para que el tiempo quede correcto.
+         </p>` : "";
+
     body.innerHTML = `
       <div class="modal-summary">
-        <div class="summary-row"><span class="summary-key">Pedido</span><span class="summary-val highlight">#${data.numero_pedido}</span></div>
-        <div class="summary-row"><span class="summary-key">Sacador</span><span class="summary-val">${data.sacador.split(" ").slice(0, 2).join(" ")}</span></div>
+        <div class="summary-row"><span class="summary-key">Pedido</span><span class="summary-val highlight">#${esc(data.numero_pedido)}</span></div>
+        <div class="summary-row"><span class="summary-key">Sacador</span><span class="summary-val">${esc(data.sacador.split(" ").slice(0, 2).join(" "))}</span></div>
         ${equipoRow}
         <div class="summary-row"><span class="summary-key">Productos sacados</span><span class="summary-val">${cantSacada} / ${data.cantidad_referencias} (${porcentaje}%)</span></div>
-        <div class="summary-row"><span class="summary-key">Tiempo laborable</span><span class="summary-val success">${formatTime(elapsedSeg)}</span></div>
-        <div class="summary-row"><span class="summary-key">Tiempo/producto</span><span class="summary-val success">${tpp}</span></div>
+        <div class="summary-row"><span class="summary-key">Tiempo laborable</span><span class="summary-val success" id="res-tiempo">${formatTime(elapsedSeg)}</span></div>
+        <div class="summary-row"><span class="summary-key">Tiempo/producto</span><span class="summary-val success" id="res-tpp">${tpp}</span></div>
         <div class="summary-row"><span class="summary-key">Bultos</span><span class="summary-val">${modalRespuestas.bultos}</span></div>
         <div class="summary-row"><span class="summary-key">Monto total</span><span class="summary-val">RD$ ${parseFloat(modalRespuestas.monto).toFixed(2)}</span></div>
       </div>
+      ${avisoAlerta}
+      <details class="modal-ajuste" ${alerta ? "open" : ""} style="margin-top:10px;">
+        <summary style="cursor:pointer;font-size:13px;">¿Terminó antes? Ajustar hora real de fin</summary>
+        <input type="datetime-local" id="modal-fin-real"
+               min="${toLocalInput(new Date(aMs(data.hora_inicio)))}"
+               max="${toLocalInput(new Date())}"
+               onchange="actualizarResumenFin()"
+               style="width:100%;margin-top:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#333);background:var(--surface2,#1e1e2e);color:inherit;font-size:13px;" />
+        <p class="modal-hint" style="margin-top:6px;">Déjalo vacío para finalizar con la hora actual.</p>
+        <p class="modal-hint error-msg" id="modal-fin-error"></p>
+      </details>
     `;
     footer.innerHTML = `
       <button class="modal-btn secondary" onclick="modalAnterior()">← Atrás</button>
@@ -1463,27 +1666,39 @@ async function confirmarFinalizar() {
   const data = pedidosActivos[modalId];
   if (!data) return;
 
-  // Guardamos el id ANTES de cerrar el modal (cerrarModal pone modalId = null)
   const idPedido = modalId;
+
+  // 1) Hora de fin elegida (antes de cerrar el modal, por si hay error)
+  const fin = obtenerFinElegidoMs(data);
+  if (fin.error) {
+    const errEl = document.getElementById("modal-fin-error");
+    if (errEl) { errEl.textContent = fin.error; errEl.classList.add("visible"); }
+    mostrarToast(`⚠️ ${fin.error}`, "warn");
+    return;
+  }
+
+  // 2) Tiempo con esa hora de fin
+  const finMs = fin.ms;
+  const finISO = new Date(finMs).toISOString();
+  const segmentosFinal = recortarSegmentos(data.segmentos, finMs);
+  const elapsedMs = calcularMsSegmentos(data.sacador, segmentosFinal, finMs);
+  const elapsedSeg = Math.floor(elapsedMs / 1000);
+
+  // 3) Doble verificación si el tiempo es sospechosamente alto
+  if (!fin.ajustado && elapsedSeg >= UMBRAL_ALERTA_SEG) {
+    const ok = confirm(
+      `Este pedido acumula ${formatTime(elapsedSeg)} de tiempo laborable.\n\n` +
+      `¿Seguro que es correcto? Si ya había terminado antes, pulsa Cancelar y ajusta la hora real de fin.`
+    );
+    if (!ok) return;
+  }
 
   cerrarModal();
 
   try {
-    const ahoraDate = new Date();
-    const ahora = ahoraDate.toISOString();
     const cantidadSacada = modalRespuestas.cantidad;
     const bultos = modalRespuestas.bultos;
     const montoTotal = parseFloat(modalRespuestas.monto);
-
-    // Cerrar el segmento abierto (si no estaba pausado)
-    if (!data.paused) {
-      const ultimo = data.segmentos[data.segmentos.length - 1];
-      if (ultimo && ultimo.fin === null) ultimo.fin = ahora;
-    }
-
-    // Tiempo laborable real del líder, ya calculado a partir de los segmentos
-    const elapsedMs = calcularElapsedMs(data, ahoraDate.getTime());
-    const elapsedSeg = Math.floor(elapsedMs / 1000);
     const tiempoPorProductoSeg = cantidadSacada > 0 ? (elapsedSeg / cantidadSacada) : 0;
 
     const participantes = [
@@ -1491,7 +1706,7 @@ async function confirmarFinalizar() {
         sacador: data.sacador,
         rol: "Lider",
         hora_inicio: data.hora_inicio,
-        hora_fin: ahora,
+        hora_fin: finISO,
         tiempo_total_segundos: elapsedSeg,
         tiempo_por_producto_segundos: tiempoPorProductoSeg
       }
@@ -1501,53 +1716,57 @@ async function confirmarFinalizar() {
       data.auxiliares.forEach(aux => {
         const nombre = typeof aux === "string" ? aux : aux.nombre;
         const joinedAt = typeof aux === "object" && aux.joined_at ? aux.joined_at : data.hora_inicio;
-        const tiempoAuxSeg = calcularSegLaborables(nombre, new Date(joinedAt).getTime(), ahoraDate.getTime());
+        // Solo cuentan los tramos en que el pedido estuvo activo
+        const tiempoAuxSeg = calcularSegAuxiliar(nombre, segmentosFinal, aMs(joinedAt));
         participantes.push({
           sacador: nombre,
           rol: "Auxiliar",
           hora_inicio: joinedAt,
-          hora_fin: ahora,
+          hora_fin: finISO,
           tiempo_total_segundos: tiempoAuxSeg,
           tiempo_por_producto_segundos: cantidadSacada > 0 ? (tiempoAuxSeg / cantidadSacada) : 0
         });
       });
     }
 
-    // Llamar al backend para finalizar (incluye segmentos + tiempo real calculado)
-    const pedidoFinalizado = await GMApi.finalizarPedido(
+    await GMApi.finalizarPedido(
       idPedido,
       cantidadSacada,
       bultos,
       montoTotal,
-      ahora,
+      finISO,
       participantes,
-      data.segmentos,
+      segmentosFinal,
       elapsedSeg,
       tiempoPorProductoSeg
     );
 
-    // Actualizar estado local
+    // Estado local (solo tras éxito en el backend)
+    data.segmentos = segmentosFinal;
     data.estatus = "Finalizado";
+    data.paused = true;
     data.elapsedMsFinal = elapsedMs;
+    data._alerta = false;
     clearInterval(timers[idPedido]);
     clearInterval(badgeTimers[idPedido]);
 
-    // Actualizar UI
     const card = document.getElementById(`card-${idPedido}`);
-    if (card) card.classList.add("finalizado");
+    if (card) { card.classList.add("finalizado"); card.dataset.alerta = "0"; }
 
     const endEl = document.getElementById(`end-${idPedido}`);
-    if (endEl) endEl.textContent = formatearFecha(ahora);
+    if (endEl) endEl.textContent = formatearFecha(finISO);
 
     const timerEl = document.getElementById(`timer-${idPedido}`);
-    if (timerEl) timerEl.textContent = formatTime(elapsedSeg);
+    if (timerEl) { timerEl.textContent = formatTime(elapsedSeg); timerEl.classList.remove("alerta"); }
 
     const tppWrap = document.getElementById(`tpp-wrap-${idPedido}`);
     const tppEl = document.getElementById(`tpp-${idPedido}`);
     const badgeEl = document.getElementById(`badge-pausa-${idPedido}`);
+    const badgeAlerta = document.getElementById(`badge-alerta-${idPedido}`);
     if (tppWrap) tppWrap.style.display = "block";
     if (tppEl) tppEl.textContent = cantidadSacada > 0 ? formatTime(Math.floor(tiempoPorProductoSeg)) : "—";
     if (badgeEl) badgeEl.style.display = "none";
+    if (badgeAlerta) badgeAlerta.style.display = "none";
 
     const teamSection = document.getElementById(`team-section-${idPedido}`);
     if (teamSection) {
@@ -1558,6 +1777,7 @@ async function confirmarFinalizar() {
     if (btnAuxSuelto) btnAuxSuelto.remove();
 
     actualizarStats();
+    refrescarTimers();
 
     const porcentaje = Math.round((cantidadSacada / data.cantidad_referencias) * 100);
     const tppFormato = cantidadSacada > 0 ? formatTime(Math.floor(tiempoPorProductoSeg)) : "—";
@@ -1586,14 +1806,15 @@ function aplicarFiltro() {
   document.querySelectorAll(".task").forEach(card => {
     const matchCodigo = card.dataset.codigo?.includes(textoBusqueda) ?? true;
     const matchSacador = sacadorFiltro ? card.dataset.sacador?.includes(sacadorFiltro) : true;
-    const visible = matchCodigo && matchSacador;
+    const matchAntiguo = soloAntiguos ? card.dataset.alerta === "1" : true;
+    const visible = matchCodigo && matchSacador && matchAntiguo;
     card.style.display = visible ? "" : "none";
     if (visible) visibles++;
   });
 
   const countEl = document.getElementById("filter-count");
   if (countEl) {
-    countEl.textContent = textoBusqueda || sacadorFiltro
+    countEl.textContent = textoBusqueda || sacadorFiltro || soloAntiguos
       ? `${visibles} de ${total}`
       : `${total} pedidos`;
   }
@@ -1607,6 +1828,7 @@ function limpiarFiltro() {
   const sf = document.getElementById("filtro-sacador");
   if (tf) tf.value = "";
   if (sf) sf.value = "";
+  soloAntiguos = false;
   aplicarFiltro();
 }
 
@@ -1635,6 +1857,6 @@ function mostrarToast(msg, tipo = "info") {
 //  INICIALIZACIÓN
 // ============================================================
 // El DOMContentLoaded está en el HTML y llama a inicializarAutenticacion()
-// que a su vez llama a cargarPedidosDelBackend()
+// que a su vez llama a cargarPedidosDelBackend().
 
 precargarFeriadosRD();
