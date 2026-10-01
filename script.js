@@ -486,28 +486,68 @@ function cerrarSesion() {
 // ============================================================
 //  CARGAR PEDIDOS DEL BACKEND
 // ============================================================
+// ============================================================
+//  PARCHE 1 — script.js
+//  Reemplaza la función cargarPedidosDelBackend() completa por esta.
+//
+//  Qué corrige:
+//   - Antes pedía solo "En Proceso", "Pausado" y "Finalizado". Los pedidos con
+//     estatus "En Proceso - Equipo" nunca se pedían, así que no aparecían.
+//     Ahora se hace UNA consulta sin filtro y llegan todos.
+//   - Antes, si UN pedido traía un campo vacío (por ejemplo sacador o
+//     numero_pedido en null), el ciclo se rompía y los demás no se mostraban.
+//     Ahora cada pedido se muestra por separado y el que falla se reporta
+//     en la consola con su número.
+//   - Antes borraba todo el #task-list, incluido el #empty-state. Ahora solo
+//     borra las tarjetas.
+// ============================================================
 async function cargarPedidosDelBackend() {
   try {
-    const pedidosEnProceso = await GMApi.obtenerPedidos("En Proceso");
-    const pedidosPausados = await GMApi.obtenerPedidos("Pausado");
-    const pedidosFinalizados = await GMApi.obtenerPedidos("Finalizado");
+    const todosPedidos = await GMApi.obtenerPedidos();
 
-    const todosPedidos = [...pedidosEnProceso, ...pedidosPausados, ...pedidosFinalizados];
+    Object.values(timers).forEach(clearInterval);
+    Object.values(badgeTimers).forEach(clearInterval);
+    timers = {};
+    badgeTimers = {};
+    pedidosActivos = {};
+    document.querySelectorAll("#task-list .task").forEach((t) => t.remove());
 
-    const taskList = document.getElementById("task-list");
-    taskList.innerHTML = "";
-
+    let fallidos = 0;
     for (const pedido of todosPedidos) {
-      await renderizarPedido(pedido);
+      try {
+        await renderizarPedido(pedido);
+      } catch (e) {
+        fallidos++;
+        if (pedido && pedido.id) delete pedidosActivos[pedido.id];
+        console.error("❌ No se pudo mostrar el pedido", pedido && pedido.numero_pedido, pedido, e);
+      }
     }
 
     actualizarStats();
     aplicarFiltro();
+
+    if (fallidos) {
+      mostrarToast(`⚠️ ${fallidos} pedido(s) no se pudieron mostrar. Revisa la consola (F12).`, "warn");
+    }
   } catch (err) {
     console.error("❌ Error cargando pedidos:", err.message);
     mostrarToast("⚠️ Error al cargar pedidos. Recarga la página.", "error");
   }
 }
+
+// ============================================================
+//  PARCHE 2 — gm-api.js
+//  En el método request(), cambia esta línea:
+//
+//      if (res.status === 401) {
+//
+//  por esta:
+//
+//      if (res.status === 401 && !path.startsWith("/api/auth/login")) {
+//
+//  Así una contraseña incorrecta ya no recarga la página: el mensaje de
+//  error llega al formulario de login.
+// ============================================================
 
 /**
  * Renderiza un pedido individual desde el backend.
