@@ -124,6 +124,15 @@ function renderListaSacadores() {
   document.getElementById("stat-sac-total").textContent = _sacadoresCache.length;
 }
 
+function _escSac(v) {
+  return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// El id llega como texto desde los onclick; el del servidor puede ser número.
+function _buscarSacador(id) {
+  return _sacadoresCache.find(x => String(x.id) === String(id));
+}
+
 function _fmtHora(hhmmss) {
   if (!hhmmss) return "—";
   return hhmmss.slice(0, 5); // "17:00:00" -> "17:00"
@@ -131,7 +140,7 @@ function _fmtHora(hhmmss) {
 
 function _crearTarjetaSacador(s) {
   const card = document.createElement("div");
-  card.className = "task" + (s.activo ? "" : " finalizado");
+  card.className = "task" + (s.activo ? "" : " inactivo");
 
   const breaksTxt = (s.breaks || []).length > 0
     ? s.breaks.map(b => `${_fmtHora(b.hora)} (${b.duracion_min}min)`).join(", ")
@@ -143,8 +152,8 @@ function _crearTarjetaSacador(s) {
 
   card.innerHTML = `
     <div class="task-header">
-      <div class="task-code">${s.nombre}</div>
-      <button class="btn-delete" onclick="eliminarSacador('${s.id}')" title="Eliminar">✕</button>
+      <div class="task-code">${_escSac(s.nombre)}</div>
+      <button class="btn-delete" onclick="eliminarSacador('${_escSac(s.id)}')" title="Eliminar">✕</button>
     </div>
     <div class="task-meta">
       <span class="meta-item">🕗 Entrada <strong>${_fmtHora(s.horario_entrada)}</strong></span>
@@ -160,8 +169,8 @@ function _crearTarjetaSacador(s) {
       <div class="time-row"><span class="time-label">Breaks</span><span class="time-value">${breaksTxt}</span></div>
     </div>
     <div class="task-actions">
-      <button class="btn-action btn-pause" onclick="abrirModalSacador('${s.id}')">✎ Editar</button>
-      <button class="btn-action btn-resume" onclick="toggleActivoSacador('${s.id}', ${!s.activo})">
+      <button class="btn-action btn-neutral" onclick="abrirModalSacador('${_escSac(s.id)}')">✎ Editar</button>
+      <button class="btn-action btn-resume" onclick="toggleActivoSacador('${_escSac(s.id)}', ${!s.activo})">
         ${s.activo ? "⏸ Desactivar" : "▶ Activar"}
       </button>
     </div>
@@ -181,12 +190,12 @@ function abrirModalSacador(id = null) {
   const titleEl = document.getElementById("sacador-modal-title");
 
   if (id) {
-    const s = _sacadoresCache.find(x => x.id === id);
+    const s = _buscarSacador(id);
     if (!s) return;
     titleEl.textContent = `Editar — ${s.nombre}`;
     document.getElementById("sac-nombre").value = s.nombre;
     document.getElementById("sac-activo").checked = !!s.activo;
-    document.getElementById("sac-entrada").value = _fmtHora(s.horario_entrada) || "08:00";
+    document.getElementById("sac-entrada").value = s.horario_entrada ? _fmtHora(s.horario_entrada) : "08:00";
     document.getElementById("sac-salida-ljv").value = _fmtHora(s.salida_lun_jue);
     document.getElementById("sac-salida-vie").value = _fmtHora(s.salida_viernes);
     document.getElementById("sac-salida-sab").value = _fmtHora(s.salida_sabado);
@@ -254,6 +263,15 @@ async function guardarSacador() {
 
   const toHHMMSS = v => (v ? v + ":00" : null);
 
+  const v = id => document.getElementById(id).value;
+  const err = msg => { errorEl.textContent = msg; errorEl.classList.add("visible"); };
+  const entrada = v("sac-entrada") || "08:00";
+  for (const [id, dia] of [["sac-salida-ljv", "lunes a jueves"], ["sac-salida-vie", "viernes"], ["sac-salida-sab", "sábado"]]) {
+    if (v(id) && v(id) <= entrada) return err(`La salida del ${dia} debe ser después de la entrada (${entrada}).`);
+  }
+  if (!!v("sac-almuerzo-inicio") !== !!v("sac-almuerzo-fin")) return err("Indica el inicio y el fin del almuerzo, o deja ambos vacíos.");
+  if (v("sac-almuerzo-inicio") && v("sac-almuerzo-fin") <= v("sac-almuerzo-inicio")) return err("El almuerzo debe terminar después de empezar.");
+
   const datos = {
     nombre,
     activo: document.getElementById("sac-activo").checked,
@@ -300,7 +318,7 @@ async function toggleActivoSacador(id, nuevoValor) {
 }
 
 async function eliminarSacador(id) {
-  const s = _sacadoresCache.find(x => x.id === id);
+  const s = _buscarSacador(id);
   if (!s) return;
   if (!confirm(`¿Eliminar a ${s.nombre}? Si tiene pedidos o historial asociado, considera desactivarlo en vez de eliminarlo.`)) return;
 

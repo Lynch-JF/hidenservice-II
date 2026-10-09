@@ -74,7 +74,8 @@ const GMApi = {
       });
 
       // Token expirado o inválido
-      if (res.status === 401) {
+      // En el login un 401 es "contraseña incorrecta": no hay sesión que cerrar.
+      if (res.status === 401 && !path.startsWith("/api/auth/login")) {
         console.warn("⚠️ Token expirado o inválido");
         this.cerrarSesion();
         throw new Error("Sesión expirada. Inicia sesión de nuevo.");
@@ -227,16 +228,20 @@ const GMApi = {
   /**
    * PATCH /api/pedidos/:id/finalizar — finalizar pedido y crear historial
    */
-  async finalizarPedido(id, cantidad_sacada, bultos, monto_final, hora_fin, participantes) {
-    return this.patch(`/api/pedidos/${id}/finalizar`, {
+  async finalizarPedido(id, cantidad_sacada, bultos, monto_final, hora_fin, participantes,
+                        segmentos = undefined, tiempo_total_segundos = 0, tiempo_por_producto_segundos = 0) {
+    // Antes el tiempo se mandaba siempre en 0 aunque la pantalla lo calculaba bien.
+    const body = {
       cantidad_sacada,
       bultos,
       monto_final,
       hora_fin,
-      tiempo_total_segundos: 0, // Se calcula en el backend si es necesario
-      tiempo_por_producto_segundos: 0,
+      tiempo_total_segundos,
+      tiempo_por_producto_segundos,
       participantes
-    });
+    };
+    if (segmentos) body.segmentos = segmentos;
+    return this.patch(`/api/pedidos/${id}/finalizar`, body);
   },
 
   /**

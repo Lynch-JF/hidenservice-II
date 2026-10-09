@@ -61,7 +61,7 @@ function getRangosConExtras(fecha, sacador, rangosBase) {
       regla.sacadores.includes(sacador);
     if (!aplica) continue;
 
-    const entrada = hhmmssASeg(regla.horaEntrada || HORA_ENTRADA);
+    const entrada = hhmmssASeg(regla.horaEntrada || (typeof getHoraEntrada === "function" ? getHoraEntrada(sacador) : HORA_ENTRADA_DEFAULT));
     const salida  = hhmmssASeg(regla.horaSalida);
 
     if (regla.tipo === "dia_especial") {
@@ -100,13 +100,8 @@ function esMomentoLaborable(sacador, tsMs) {
   return getRangosLaboralesDia(d, sacador).some(([a, b]) => seg >= a && seg < b);
 }
 
-// ── Bloqueo de domingo sin día especial ─────────────────────
-// Sobrescribimos agregarPedido para permitir domingos si hay regla activa.
-// (El original ya bloquea domingos; este wrapper lo relaja cuando procede.)
-const _agregarPedidoOriginal = typeof agregarPedido === "function"
-  ? agregarPedido
-  : null;
-
+// ── Domingos: script.js (agregarPedido) consulta esta función para permitir
+//    iniciar pedidos un domingo solo si hay un Día Especial activo.
 function _tieneDiaEspecialHoy(sacador) {
   const now     = new Date();
   const fechaKey = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
@@ -117,53 +112,6 @@ function _tieneDiaEspecialHoy(sacador) {
     r.tipo === "dia_especial" &&
     (r.sacadores.includes("todos") || r.sacadores.includes(sacador))
   );
-}
-
-// Reasignamos agregarPedido SÓLO para quitar el bloqueo de domingo
-// cuando hay un día especial configurado.
-// NOTA: el resto de la validación permanece intacta en script.js.
-window._agregarPedidoConExtras = function() {
-  const sacador = document.getElementById("sacador")?.value || "";
-  const now     = new Date();
-
-  if (now.getDay() === 0 && !_tieneDiaEspecialHoy(sacador)) {
-    mostrarToast("🚫 Los domingos no se pueden iniciar pedidos. Configura un Día Especial primero.", "error");
-    return;
-  }
-  // Delegar al flujo normal (omitiendo la validación de domingo original)
-  // Usamos una copia que no tiene el bloqueo de domingo.
-  _ejecutarAgregarPedidoSinBloqueoDomingo();
-};
-
-function _ejecutarAgregarPedidoSinBloqueoDomingo() {
-  const codigo   = document.getElementById("codigo").value.trim();
-  const sacador  = document.getElementById("sacador").value;
-  const cantidad = parseInt(document.getElementById("cantidad").value.trim(), 10);
-  const now      = new Date();
-
-  if (!codigo || !sacador || isNaN(cantidad) || cantidad <= 0) {
-    mostrarToast("⚠️ Completa todos los campos correctamente.", "warn"); return;
-  }
-  if (esFeriado(now)) {
-    mostrarToast("🚫 Hoy es un día feriado no laborable.", "error"); return;
-  }
-  // (resto idéntico al agregarPedido original — sin el bloqueo de domingo)
-  const nowMs = now.getTime();
-  const index = nowMs;
-  const pedidoData = {
-    index, codigo, sacador, cantidad,
-    startTimestamp: nowMs,
-    segmentos:      [{ inicio: nowMs, fin: null }],
-    paused: false, tipoPausa: null, reanudado: false, finalizado: false,
-    tiempoPorProducto: null, elapsedMsFinal: 0,
-    tieneEquipo: false, liderId: sacador, auxiliares: []
-  };
-  if (cantidad >= UMBRAL_EQUIPO) {
-    _pedidoPendiente = pedidoData;
-    _abrirModalEquipo(pedidoData);
-    return;
-  }
-  _crearPedidoFinal(pedidoData);
 }
 
 // ============================================================
@@ -293,8 +241,8 @@ function _renderExtrasLista() {
         </div>
         <div class="extras-rule-details">
           <span class="extras-detail-pill">🕐 ${horario}</span>
-          <span class="extras-detail-pill">👥 ${sacLabel.length > 40 ? sacLabel.slice(0,37)+"…" : sacLabel}</span>
-          ${r.nota ? `<span class="extras-detail-pill">📝 ${r.nota}</span>` : ""}
+          <span class="extras-detail-pill">👥 ${esc(sacLabel.length > 40 ? sacLabel.slice(0,37)+"…" : sacLabel)}</span>
+          ${r.nota ? `<span class="extras-detail-pill">📝 ${esc(r.nota)}</span>` : ""}
         </div>
       </div>`;
   }).join("");
@@ -308,7 +256,7 @@ function _renderExtrasForm() {
   const hoy      = new Date();
   const hoyStr   = `${hoy.getFullYear()}-${pad(hoy.getMonth()+1)}-${pad(hoy.getDate())}`;
   const sacOpts  = TODOS_LOS_SACADORES.map(s =>
-    `<option value="${s}">${s}</option>`
+    `<option value="${esc(s)}">${esc(s)}</option>`
   ).join("");
 
   body.innerHTML = `
@@ -529,7 +477,7 @@ function guardarNuevaReglaExtra() {
     tipo,
     fecha,
     sacadores,
-    horaEntrada: tipo === "dia_especial" ? (entrada + ":00") : HORA_ENTRADA,
+    horaEntrada: tipo === "dia_especial" ? (entrada + ":00") : HORA_ENTRADA_DEFAULT,
     horaSalida:  salida + ":00",
     nota,
     activa: true

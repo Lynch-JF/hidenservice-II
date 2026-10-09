@@ -109,7 +109,7 @@ async function renderListaUsuarios() {
     try {
       usuariosCache = await GMApi.obtenerUsuarios();
     } catch (err) {
-      listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>${err.message || "No se pudo cargar la lista de usuarios."}</div></div>`;
+      listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div>${escaparHtml(err.message || "No se pudo cargar la lista de usuarios.")}</div></div>`;
       countEl.textContent = "0 usuarios";
       return;
     }
@@ -128,22 +128,27 @@ async function renderListaUsuarios() {
   }
 
   listEl.innerHTML = filtrados.map(u => `
-    <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);">
       <div style="display:flex;flex-direction:column;gap:2px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <strong>${escaparHtml(u.nombre)}</strong>
-          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${u.rol === 'admin' ? 'var(--accent, #2d6a4f)' : 'rgba(255,255,255,0.08)'};color:${u.rol === 'admin' ? '#fff' : 'inherit'};">${escaparHtml(u.rol)}</span>
-          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${u.activo ? 'rgba(45,106,79,0.25)' : 'rgba(200,60,60,0.2)'};">${u.activo ? 'Activo' : 'Inactivo'}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${u.rol === 'admin' ? 'var(--accent)' : 'var(--bg-elevated)'};color:${u.rol === 'admin' ? 'var(--text-on-accent)' : 'inherit'};">${_rolNormalizado(u.rol) === 'admin' ? 'Administrador' : 'Operador'}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${u.activo ? 'var(--success-glow)' : 'var(--danger-glow)'};">${u.activo ? 'Activo' : 'Inactivo'}</span>
         </div>
-        <span style="font-size:12px;color:var(--text-muted,#999);">${escaparHtml(u.email)}</span>
+        <span style="font-size:12px;color:var(--text-muted);">${escaparHtml(u.email)}</span>
       </div>
       <div style="display:flex;gap:6px;">
-        <button class="modal-btn secondary" style="padding:6px 10px;font-size:12px;" onclick="abrirModalUsuario('${u.id}')">✏️ Editar</button>
-        <button class="modal-btn secondary" style="padding:6px 10px;font-size:12px;" onclick="toggleActivoUsuario('${u.id}', ${u.activo})">${u.activo ? '🚫 Desactivar' : '✅ Activar'}</button>
-        <button class="modal-btn secondary" style="padding:6px 10px;font-size:12px;color:#e05a5a;" onclick="eliminarUsuario('${u.id}', '${escaparHtml(u.nombre).replace(/'/g, "\\'")}')">🗑️</button>
+        <button class="modal-btn secondary" style="padding:6px 10px;font-size:12px;" onclick="abrirModalUsuario('${escaparHtml(u.id)}')">✏️ Editar</button>
+        <button class="modal-btn secondary" style="padding:6px 10px;font-size:12px;" onclick="toggleActivoUsuario('${escaparHtml(u.id)}', ${!!u.activo})">${u.activo ? '🚫 Desactivar' : '✅ Activar'}</button>
+        <button class="modal-btn secondary" style="padding:6px 10px;font-size:12px;color:var(--danger);" onclick="eliminarUsuario('${escaparHtml(u.id)}')">🗑️</button>
       </div>
     </div>
   `).join("");
+}
+
+function _rolNormalizado(rol) {
+  const r = String(rol || "").toLowerCase();
+  return r === "admin" || r === "administrador" ? "admin" : "operador";
 }
 
 function escaparHtml(str) {
@@ -178,7 +183,9 @@ function abrirModalUsuario(id = null) {
 
     document.getElementById("usr-nombre").value = usuario.nombre;
     document.getElementById("usr-email").value = usuario.email;
-    document.getElementById("usr-rol").value = usuario.rol;
+    // El rol se guarda como "admin" u "operador" (antes el selector usaba "Administrador"/"Operador",
+    // no encontraba el valor y al guardar degradaba al administrador a operador).
+    document.getElementById("usr-rol").value = _rolNormalizado(usuario.rol);
     document.getElementById("usr-activo").checked = !!usuario.activo;
   } else {
     titulo.textContent = "Registrar usuario";
@@ -187,7 +194,7 @@ function abrirModalUsuario(id = null) {
 
     document.getElementById("usr-nombre").value = "";
     document.getElementById("usr-email").value = "";
-    document.getElementById("usr-rol").value = "Operador";
+    document.getElementById("usr-rol").value = "operador";
   }
 
   overlay.classList.add("open");
@@ -202,7 +209,7 @@ async function guardarUsuario() {
   const nombre = document.getElementById("usr-nombre").value.trim();
   const email = document.getElementById("usr-email").value.trim();
   const password = document.getElementById("usr-password").value;
-  const rol = document.getElementById("usr-rol").value.toLowerCase();
+  const rol = _rolNormalizado(document.getElementById("usr-rol").value);
   const errorEl = document.getElementById("usr-error");
   const btnGuardar = document.getElementById("usr-btn-guardar");
 
@@ -253,7 +260,8 @@ async function toggleActivoUsuario(id, activoActual) {
   }
 }
 
-async function eliminarUsuario(id, nombre) {
+async function eliminarUsuario(id) {
+  const nombre = (usuariosCache.find(u => String(u.id) === String(id)) || {}).nombre || "este usuario";
   if (!confirm(`¿Eliminar al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
 
   try {
