@@ -235,9 +235,11 @@ function _avisarSinHorario(sacador) {
 function getSalidaPersonal(sacador, dia) {
   _avisarSinHorario(sacador);
   const s = SACADORES_CACHE[sacador];
-  if (dia >= 1 && dia <= 4) return s ? s.salida_lun_jue : "18:00:00";
-  if (dia === 5) return s ? s.salida_viernes : "17:00:00";
-  if (dia === 6) return s ? s.salida_sabado : "12:00:00";
+  // Si el sacador existe pero no tiene cargada la salida de ese día, se usa la
+  // salida por defecto (antes devolvía null y su tiempo contaba como 0).
+  if (dia >= 1 && dia <= 4) return (s && s.salida_lun_jue) || "18:00:00";
+  if (dia === 5) return (s && s.salida_viernes) || "17:00:00";
+  if (dia === 6) return (s && s.salida_sabado) || "12:00:00";
   return null;
 }
 
@@ -300,6 +302,7 @@ function getRangosLaboralesDia(fecha, sacador) {
   const breaksSacador = getBreaksSacador(sacador);
   if (dia >= 1 && dia <= 4 && breaksSacador.length > 0) {
     for (const b of breaksSacador) {
+      if (!b.hora) continue;
       const ini = hhmmssASeg(b.hora);
       const fin = ini + b.durMin * 60;
       if (ini >= entrada && fin <= salida) pausas.push({ inicio: ini, fin });
@@ -656,7 +659,10 @@ async function renderizarPedido(pedido) {
 // ============================================================
 //  AGREGAR PEDIDO NUEVO
 // ============================================================
+let _creandoPedido = false;
+
 async function agregarPedido() {
+  if (_creandoPedido) return; // evita crear el mismo pedido dos veces con doble clic
   const codigo = document.getElementById("codigo").value.trim();
   const sacador = document.getElementById("sacador").value;
   const cantidad = parseInt(document.getElementById("cantidad").value.trim(), 10);
@@ -694,10 +700,13 @@ async function agregarPedido() {
       return;
     }
 
+    _creandoPedido = true;
     await _crearPedidoEnBackend(codigo, sacador, cantidad, false, []);
   } catch (err) {
     console.error("❌ Error al agregar pedido:", err.message);
     mostrarToast("❌ Error al crear pedido. Intenta de nuevo.", "error");
+  } finally {
+    _creandoPedido = false;
   }
 }
 
@@ -1045,6 +1054,7 @@ function calcularProximaPausa(sacador, now) {
   const breaksSacador = getBreaksSacador(sacador);
   if (dia >= 1 && dia <= 4 && breaksSacador.length > 0) {
     for (const b of breaksSacador) {
+      if (!b.hora) continue;
       const p = getFutureTime(now, b.hora);
       if (p > now) eventos.push({ label: `☕ Break ${b.durMin}min`, time: p, tipo: "break" });
     }
@@ -1282,7 +1292,7 @@ function crearTarjeta(pedido) {
       </div>
       <div class="time-row">
         <span class="time-label">Fin</span>
-        <span class="time-value" id="end-${id}">—</span>
+        <span class="time-value" id="end-${id}">${estatus === "Finalizado" && pedido.hora_fin ? formatearFecha(pedido.hora_fin) : "—"}</span>
       </div>
     </div>
     <div class="task-timer" id="timer-${id}">00:00:00</div>
@@ -1294,6 +1304,7 @@ function crearTarjeta(pedido) {
       <button class="btn-action btn-resume" onclick="reanudar('${id}')">▶ Reanudar</button>
       <button class="btn-action btn-finish" onclick="abrirModalFinalizar('${id}')">✔ Finalizar</button>
     </div>
+    <div class="task-finalizado-tag">✔ Finalizado</div>
   `;
 
   document.getElementById("task-list").appendChild(task);
@@ -1382,6 +1393,8 @@ async function confirmarAgregarAux() {
     return;
   }
 
+  if (confirmarAgregarAux._enCurso) return;
+  confirmarAgregarAux._enCurso = true;
   try {
     await GMApi.agregarAuxiliarAPedido(_auxTargetId, nuevoAux);
 
@@ -1398,6 +1411,8 @@ async function confirmarAgregarAux() {
   } catch (err) {
     console.error("❌ Error agregando auxiliar:", err);
     errorEl.classList.add("visible");
+  } finally {
+    confirmarAgregarAux._enCurso = false;
   }
 }
 
@@ -1438,6 +1453,9 @@ function _actualizarSeccionEquipo(id) {
     ${miembrosHTML}
     ${data.estatus !== "Finalizado" ? `<button class="btn-add-aux" onclick="abrirModalAux('${id}')">${btnLabel}</button>` : ""}
   `;
+
+  const btnSuelto = card.querySelector(":scope > .btn-add-aux");
+  if (btnSuelto) btnSuelto.remove();
 
   let teamSection = document.getElementById(`team-section-${id}`);
   if (teamSection) {
@@ -1570,7 +1588,7 @@ function renderModalStep(step) {
          </div>` : "";
 
     const avisoAlerta = alerta
-      ? `<p class="modal-hint" style="color:#ffb454;margin:10px 0 4px;">
+      ? `<p class="modal-hint" style="color:var(--warn);margin:10px 0 4px;">
            ⚠ Este pedido acumula ${formatTime(elapsedSeg)} de tiempo laborable. Si ya había terminado antes,
            indica abajo la hora real de fin para que el tiempo quede correcto.
          </p>` : "";
@@ -1833,8 +1851,42 @@ function limpiarFiltro() {
 }
 
 // ============================================================
+//  VISTA DE PEDIDOS (tarjetas / lista)
+//  Los botones ya existían en index.html pero la función no.
+// ============================================================
+function setVistaPedidos(vista) {
+  const lista = document.getElementById("task-list");
+  if (!lista) return;
+  const enLista = vista === "list";
+  lista.classList.toggle("list-view", enLista);
+  document.getElementById("btn-view-grid")?.classList.toggle("active", !enLista);
+  document.getElementById("btn-view-list")?.classList.toggle("active", enLista);
+  try { localStorage.setItem("gm_vista_pedidos", enLista ? "list" : "grid"); } catch (e) {}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  let v = "grid";
+  try { v = localStorage.getItem("gm_vista_pedidos") || "grid"; } catch (e) {}
+  setVistaPedidos(v);
+});
+
+// ============================================================
 //  TOAST
 // ============================================================
+function iniciarRelojSidebarPedidos() {
+  const t = document.getElementById("sidebar-clock-time");
+  const d = document.getElementById("sidebar-clock-date");
+  if (!t) return;
+  const tick = () => {
+    const now = new Date();
+    t.textContent = now.toLocaleTimeString("es-DO", { hour12: false });
+    if (d) d.textContent = now.toLocaleDateString("es-DO", { weekday: "long", day: "numeric", month: "long" });
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+document.addEventListener("DOMContentLoaded", iniciarRelojSidebarPedidos);
+
 function mostrarToast(msg, tipo = "info") {
   let container = document.getElementById("toast-container");
   if (!container) {

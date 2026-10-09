@@ -92,7 +92,7 @@ async function poblarSelectSacadorHistorial() {
   try {
     const sacadores = await GMApi.obtenerSacadores();
     select.innerHTML = '<option value="">Todos los sacadores</option>' +
-      sacadores.map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join("");
+      sacadores.map(s => `<option value="${_escHist(s.nombre)}">${_escHist(s.nombre)}</option>`).join("");
   } catch (err) {
     console.warn("⚠️ No se pudo cargar la lista de sacadores para el filtro:", err.message);
   }
@@ -101,6 +101,10 @@ async function poblarSelectSacadorHistorial() {
 // ============================================================
 //  UTILIDADES DE FORMATO
 // ============================================================
+function _escHist(v) {
+  return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function _pad2(n) { return String(n).padStart(2, "0"); }
 
 function _formatTimeHist(totalSeconds) {
@@ -167,12 +171,12 @@ function renderTablaHistorial() {
 
     filas.forEach(h => {
       const tr = document.createElement("tr");
-      tr.style.borderTop = "1px solid var(--border, #2a2a3a)";
+      tr.style.borderTop = "1px solid var(--border)";
       tr.innerHTML = `
-        <td style="padding:10px 12px;font-weight:600;">#${h.codigo_pedido}</td>
-        <td style="padding:10px 12px;">${h.sacador}</td>
+        <td style="padding:10px 12px;font-weight:600;">#${_escHist(h.codigo_pedido)}</td>
+        <td class="col-sacador" style="padding:10px 12px;">${_escHist(h.sacador)}</td>
         <td style="padding:10px 12px;">${h.rol === "Lider" ? "👑 Líder" : "Aux"}</td>
-        <td style="padding:10px 12px;font-size:12px;color:var(--text-muted,#888);">${h.equipo_completo || "—"}</td>
+        <td class="col-equipo" style="padding:10px 12px;font-size:12px;color:var(--text-secondary);">${_escHist(h.equipo_completo || "—")}</td>
         <td style="padding:10px 12px;text-align:right;">${h.cantidad_productos ?? "—"}</td>
         <td style="padding:10px 12px;text-align:right;">${h.bultos ?? "—"}</td>
         <td style="padding:10px 12px;text-align:right;">RD$ ${Number(h.monto_final || 0).toFixed(2)}</td>
@@ -182,7 +186,7 @@ function renderTablaHistorial() {
         <td style="padding:10px 12px;text-align:right;">${_formatTimeHist(h.tiempo_por_producto_segundos)}</td>
         <td style="padding:10px 12px;text-align:center;">
           <button type="button" class="btn-editar-historial" title="Editar registro"
-            onclick="abrirModalEditarHistorial('${h.id}')"
+            onclick="abrirModalEditarHistorial('${_escHist(h.id)}')"
             style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;">
             ✏️
           </button>
@@ -219,7 +223,8 @@ function _actualizarStatsHistorial(filas) {
 //  EDICIÓN INDIVIDUAL DE REGISTROS
 // ============================================================
 function abrirModalEditarHistorial(id) {
-  const registro = _historialCache.find(h => h.id === id);
+  // El id llega como texto desde el onclick; el del servidor puede ser número.
+  const registro = _historialCache.find(h => String(h.id) === String(id));
   if (!registro) {
     mostrarToastHistorial("⚠️ No se encontró el registro.", "error");
     return;
@@ -229,7 +234,9 @@ function abrirModalEditarHistorial(id) {
   document.getElementById("edit-id").value = registro.id;
   document.getElementById("edit-codigo").value = registro.codigo_pedido || "";
   document.getElementById("edit-sacador").value = registro.sacador || "";
-  document.getElementById("edit-rol").value = registro.rol || "Aux";
+  // Los auxiliares se guardan como "Auxiliar" (antes el selector solo tenía "Aux" y
+  // mostraba "Líder", así que al guardar el auxiliar pasaba a ser líder).
+  document.getElementById("edit-rol").value = registro.rol === "Lider" ? "Lider" : "Auxiliar";
   document.getElementById("edit-equipo").value = registro.equipo_completo || "";
   document.getElementById("edit-productos").value = registro.cantidad_productos ?? "";
   document.getElementById("edit-bultos").value = registro.bultos ?? "";
@@ -273,9 +280,17 @@ async function guardarEdicionHistorial() {
     return;
   }
 
-  let tiempoTotal = 0;
-  if (horaInicioISO && horaFinISO) {
+  // El tiempo guardado es tiempo LABORABLE (sin almuerzo, breaks ni noches). Solo se
+  // recalcula si se cambiaron las horas; antes cualquier edición lo reemplazaba por el
+  // tiempo de reloj entre inicio y fin, y lo inflaba.
+  const original = _historialCache.find(h => String(h.id) === String(id)) || {};
+  const horasCambiaron =
+    inicio !== _toDatetimeLocal(original.hora_inicio) || fin !== _toDatetimeLocal(original.hora_fin);
+  let tiempoTotal = Number(original.tiempo_total_segundos) || 0;
+  if (horasCambiaron && horaInicioISO && horaFinISO) {
     tiempoTotal = Math.max(0, Math.floor((new Date(horaFinISO) - new Date(horaInicioISO)) / 1000));
+    if (!confirm("Cambiaste la hora de inicio o fin. El tiempo se recalculará como tiempo corrido entre ambas horas " +
+                 `(${_formatTimeHist(tiempoTotal)}), sin descontar almuerzo ni breaks. ¿Continuar?`)) return;
   }
   const tiempoPorProducto = productos > 0 ? Math.floor(tiempoTotal / productos) : 0;
 

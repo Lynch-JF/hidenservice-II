@@ -9,27 +9,31 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --rep-bg:          #0A0E14;
-      --rep-sidebar:     #0D1219;
-      --rep-card:        #131A24;
-      --rep-card-hover:  #171F2C;
-      --rep-border:      #202836;
-      --rep-border-soft: #1A222E;
+      /* Misma paleta clara que styles.css */
+      --rep-bg:          #f5f7fb;
+      --rep-sidebar:     #ffffff;
+      --rep-card:        #ffffff;
+      --rep-card-hover:  #f8fafc;
+      --rep-border:      #e2e8f0;
+      --rep-border-soft: #eef2f7;
 
-      --rep-text:        #E7ECF3;
-      --rep-text-light:  #8B96A8;
-      --rep-text-dim:    #5C6779;
+      --rep-text:        #0f172a;
+      --rep-text-light:  #475569;
+      --rep-text-dim:    #94a3b8;
 
-      --rep-primary:       #22C55E;
-      --rep-primary-dark:  #16A34A;
-      --rep-primary-soft:  rgba(34,197,94,0.12);
+      --rep-primary:       #2563eb;
+      --rep-primary-dark:  #1d4ed8;
+      --rep-primary-soft:  rgba(37,99,235,0.10);
 
-      --rep-accent:       #F2845C;
-      --rep-accent-2:     #4FA3D1;
-      --rep-accent-blue:  #3B82F6;
-      --rep-accent-purple:#A78BFA;
-      --rep-accent-orange:#F59E0B;
-      --rep-accent-red:   #EF4444;
+      --rep-accent:       #ea580c;
+      --rep-accent-2:     #0284c7;
+      --rep-accent-green: #16a34a;
+      --rep-accent-max:   #db2777;
+      --rep-accent-team:  #7c3aed;
+      --rep-accent-blue:  #2563eb;
+      --rep-accent-purple:#7c3aed;
+      --rep-accent-orange:#d97706;
+      --rep-accent-red:   #dc2626;
 
       --rep-radius: 14px;
       --rep-radius-sm: 10px;
@@ -56,7 +60,7 @@
     .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 22px; }
     .sidebar-logo .logo-mark {
       width: 34px; height: 34px; border-radius: 9px;
-      background: linear-gradient(135deg, #F2845C, #E84393 45%, #4FA3D1 75%, var(--rep-primary));
+      background: linear-gradient(135deg, #EA580C, #DB2777 45%, #0284C7 75%, var(--rep-primary));
       display: flex; align-items: center; justify-content: center;
       font-weight: 800; color: #fff; font-size: 0.95rem; flex-shrink: 0;
     }
@@ -174,7 +178,7 @@
       background: var(--rep-card);
       border: 1px solid var(--rep-border);
       border-radius: var(--rep-radius);
-      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+      box-shadow: 0 2px 14px rgba(15,23,42,0.06);
     }
 
     .dash-card-head {
@@ -198,35 +202,35 @@
       background: var(--rep-card); border: 1px solid var(--rep-border);
       border-radius: var(--rep-radius); padding: 18px;
       display: flex; align-items: center; gap: 14px;
-      box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+      box-shadow: 0 2px 14px rgba(15,23,42,0.06);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .dash-kpi:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+    .dash-kpi:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(15,23,42,0.10); }
     .dash-kpi .kpi-icon {
       width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
     .dash-kpi .kpi-icon svg { width: 21px; height: 21px; }
-    .dash-kpi.kpi-verde  .kpi-icon { background: rgba(34,197,94,0.14);  color: var(--rep-primary); }
+    .dash-kpi.kpi-verde  .kpi-icon { background: rgba(37,99,235,0.14);  color: var(--rep-primary); }
     .dash-kpi.kpi-azul   .kpi-icon { background: rgba(59,130,246,0.14); color: var(--rep-accent-blue); }
     .dash-kpi.kpi-naranja.kpi-icon,
-    .dash-kpi.kpi-naranja .kpi-icon { background: rgba(242,132,92,0.14); color: var(--rep-accent); }
-    .dash-kpi.kpi-morado .kpi-icon { background: rgba(167,139,250,0.14);color: var(--rep-accent-purple); }
+    .dash-kpi.kpi-naranja .kpi-icon { background: rgba(234,88,12,0.14); color: var(--rep-accent); }
+    .dash-kpi.kpi-morado .kpi-icon { background: rgba(124,58,237,0.14);color: var(--rep-accent-purple); }
 
     .dash-kpi .kpi-body { flex: 1; min-width: 0; }
     .dash-kpi .kpi-label { font-size: 0.78rem; color: var(--rep-text-light); font-weight: 600; margin-bottom: 2px; }
-    .dash-kpi .kpi-valor { font-size: 1.5rem; font-weight: 800; color: var(--rep-text); line-height: 1.15; }
+    .dash-kpi .kpi-valor { font-size: clamp(1.1rem, 1.55vw, 1.5rem); overflow-wrap: anywhere; font-weight: 800; color: var(--rep-text); line-height: 1.15; }
     .dash-kpi .kpi-trend { font-size: 0.74rem; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 3px; }
-    .dash-kpi .kpi-trend.sube { color: #4ADE80; }
-    .dash-kpi .kpi-trend.baja { color: #F87171; }
-    .dash-kpi .kpi-trend.igual { color: var(--rep-text-light); }
+    .dash-kpi .kpi-trend .bien  { color: #16A34A; }
+    .dash-kpi .kpi-trend .mal   { color: #DC2626; }
+    .dash-kpi .kpi-trend .igual { color: var(--rep-text-light); }
     .dash-kpi .kpi-spark { width: 70px; height: 34px; flex-shrink: 0; }
 
     /* Row 2 */
     .dash-row-2 { display: grid; grid-template-columns: 1.1fr 1.6fr 1fr; gap: 18px; margin-bottom: 18px; }
     @media (max-width: 1180px) { .dash-row-2 { grid-template-columns: 1fr; } }
 
-    .dash-donut-wrap { display: flex; align-items: center; gap: 18px; padding: 10px 20px 20px; }
+    .dash-donut-wrap { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 18px; padding: 10px 20px 20px; }
     .dash-donut-chart { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
     .dash-donut-center {
       position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -239,7 +243,8 @@
     .dash-donut-legend .leg-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
     .dash-donut-legend .leg-label { display: flex; align-items: center; gap: 8px; color: var(--rep-text); font-weight: 600; }
     .dash-donut-legend .leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .dash-donut-legend .leg-val { font-weight: 700; color: var(--rep-text-light); font-size: 0.82rem; }
+    .dash-donut-legend .leg-val { font-weight: 700; color: var(--rep-text-light); font-size: 0.82rem; white-space: nowrap; }
+    .dash-donut-legend .leg-row { gap: 10px; }
 
     .dash-hora-wrap { padding: 10px 20px 20px; height: 260px; }
 
@@ -258,14 +263,14 @@
       display: flex; align-items: center; justify-content: center;
     }
     .accion-btn .icon-wrap svg { width: 16px; height: 16px; }
-    .accion-btn.accion-verde .icon-wrap  { background: rgba(34,197,94,0.16);  color: var(--rep-primary); }
-    .accion-btn.accion-naranja .icon-wrap{ background: rgba(242,132,92,0.16); color: var(--rep-accent); }
+    .accion-btn.accion-verde .icon-wrap  { background: rgba(37,99,235,0.16);  color: var(--rep-primary); }
+    .accion-btn.accion-naranja .icon-wrap{ background: rgba(234,88,12,0.16); color: var(--rep-accent); }
     .accion-btn.accion-azul .icon-wrap   { background: rgba(59,130,246,0.16); color: var(--rep-accent-blue); }
     .accion-btn.accion-roja .icon-wrap   { background: rgba(239,68,68,0.16);  color: var(--rep-accent-red); }
     .accion-btn .accion-texto { flex: 1; min-width: 0; }
-    .accion-btn .accion-texto strong { display: block; font-size: 0.86rem; font-weight: 700; color: var(--rep-text); }
-    .accion-btn.accion-roja .accion-texto strong { color: #F87171; }
-    .accion-btn .accion-texto span { display: block; font-size: 0.74rem; color: var(--rep-text-light); margin-top: 1px; }
+    .accion-btn .accion-texto strong { display: block; white-space: normal; font-size: 0.86rem; font-weight: 700; color: var(--rep-text); }
+    .accion-btn.accion-roja .accion-texto strong { color: #DC2626; }
+    .accion-btn .accion-texto span { display: block; white-space: normal; font-size: 0.74rem; color: var(--rep-text-light); margin-top: 1px; }
     .accion-btn > svg.chevron { width: 15px; height: 15px; color: var(--rep-text-dim); flex-shrink: 0; }
 
     /* Row 3 */
@@ -294,17 +299,18 @@
       display: inline-flex; padding: 4px 11px; border-radius: 999px;
       font-size: 0.74rem; font-weight: 700;
     }
-    .estado-badge.activo     { background: rgba(34,197,94,0.16);  color: #4ADE80; }
-    .estado-badge.pausado    { background: rgba(242,132,92,0.16); color: #F2845C; }
-    .estado-badge.finalizado { background: rgba(148,163,184,0.14);color: var(--rep-text-light); }
+    /* Mismos colores que la gráfica de estados: azul activo, ámbar pausado, verde finalizado */
+    .estado-badge.activo     { background: rgba(37,99,235,0.10);  color: #1D4ED8; }
+    .estado-badge.pausado    { background: rgba(217,119,6,0.12);  color: #B45309; }
+    .estado-badge.finalizado { background: rgba(22,163,74,0.10);  color: #15803D; }
 
     .btn-tabla-accion {
       width: 30px; height: 30px; border-radius: 8px; border: none; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center;
     }
-    .btn-tabla-accion svg { width: 14px; height: 14px; }
-    .btn-tabla-accion.ver   { background: rgba(34,197,94,0.16); color: var(--rep-primary); }
-    .btn-tabla-accion.play  { background: var(--rep-primary); color: #06210F; }
+    .btn-tabla-accion svg { width: 14px; height: 14px; flex: none; stroke: currentColor; }
+    .btn-tabla-accion.ver   { background: rgba(37,99,235,0.16); color: var(--rep-primary); }
+    .btn-tabla-accion.play  { background: var(--rep-primary); color: #FFFFFF; }
 
     .dash-tabla-footer { text-align: center; padding-top: 10px; }
     .dash-tabla-footer a { font-size: 0.82rem; font-weight: 700; color: var(--rep-primary); }
@@ -330,15 +336,15 @@
       display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
     }
     .dash-info-item .icon-wrap svg { width: 17px; height: 17px; }
-    .dash-info-item:nth-child(1) .icon-wrap { background: rgba(34,197,94,0.14);  color: var(--rep-primary); }
-    .dash-info-item:nth-child(2) .icon-wrap { background: rgba(167,139,250,0.14);color: var(--rep-accent-purple); }
-    .dash-info-item:nth-child(3) .icon-wrap { background: rgba(242,132,92,0.14); color: var(--rep-accent); }
+    .dash-info-item:nth-child(1) .icon-wrap { background: rgba(37,99,235,0.14);  color: var(--rep-primary); }
+    .dash-info-item:nth-child(2) .icon-wrap { background: rgba(124,58,237,0.14);color: var(--rep-accent-purple); }
+    .dash-info-item:nth-child(3) .icon-wrap { background: rgba(234,88,12,0.14); color: var(--rep-accent); }
     .dash-info-item:nth-child(4) .icon-wrap { background: rgba(59,130,246,0.14); color: var(--rep-accent-blue); }
     .dash-info-item h5 { margin: 0 0 4px; font-size: 0.86rem; font-weight: 800; color: var(--rep-text); }
     .dash-info-item p { margin: 0; font-size: 0.78rem; color: var(--rep-text-light); line-height: 1.4; }
     .dash-info-item .meta-progress { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
     .dash-info-item .meta-track { flex: 1; height: 7px; border-radius: 999px; background: var(--rep-border); overflow: hidden; }
-    .dash-info-item .meta-fill { height: 100%; border-radius: 999px; background: var(--rep-accent); }
+    .dash-info-item .meta-fill { height: 100%; border-radius: 999px; background: var(--rep-accent-green); }
     .dash-info-item .meta-pct { font-size: 0.78rem; font-weight: 800; color: var(--rep-text); }
 
     @media (max-width: 1300px) { .dash-kpis { grid-template-columns: repeat(3, 1fr); } }
@@ -351,6 +357,9 @@
     }
 
     .dash-cargando { text-align: center; color: var(--rep-text-light); padding: 30px 0; font-size: 0.85rem; }
+    /* Los hijos de una grilla no se encogen por debajo de su contenido sin esto: la
+       gráfica de Chart.js se estiraba y empujaba las tarjetas fuera de la pantalla. */
+    [class*="dash-row"] > *, .dash-kpis > *, [class*="rep-grid"] > *, [class*="rep-row"] > * { min-width: 0; }
   </style>
 </head>
 <body>
@@ -367,36 +376,9 @@
         </div>
       </div>
 
-      <nav class="sidebar-nav">
-        <a href="dashboard.html" class="activo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
-          Dashboard
-        </a>
-        <a href="index.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"/></svg>
-          Pedidos
-        </a>
-        <a href="Sacadores.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.4"/><path d="M23 20v-1a4 4 0 0 0-3-3.87"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/></svg>
-          Sacadores
-        </a>
-        <a href="productos.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
-          Productos
-        </a>
-        <a href="Reportes.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
-          Reportes
-        </a>
-        <a href="Historial.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          Pedidos Finalizados
-        </a>
-        <a href="configuracion.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"/></svg>
-          Configuración
-        </a>
-      </nav>
+      <nav class="sidebar-nav" data-menu>
+      <!-- Lo llena menu.js -->
+    </nav>
 
       <div class="sidebar-spacer"></div>
 
@@ -520,15 +502,15 @@
               </div>
               <div class="dash-donut-legend">
                 <div class="leg-row">
-                  <span class="leg-label"><span class="leg-dot" style="background:#22C55E"></span>Activos</span>
+                  <span class="leg-label"><span class="leg-dot" style="background:#2563EB"></span>Activos</span>
                   <span class="leg-val" id="leg-activos">0 (0%)</span>
                 </div>
                 <div class="leg-row">
-                  <span class="leg-label"><span class="leg-dot" style="background:#3B82F6"></span>Pausados</span>
+                  <span class="leg-label"><span class="leg-dot" style="background:#D97706"></span>Pausados</span>
                   <span class="leg-val" id="leg-pausados">0 (0%)</span>
                 </div>
                 <div class="leg-row">
-                  <span class="leg-label"><span class="leg-dot" style="background:#F2845C"></span>Finalizados</span>
+                  <span class="leg-label"><span class="leg-dot" style="background:#16A34A"></span>Finalizados</span>
                   <span class="leg-val" id="leg-finalizados">0 (0%)</span>
                 </div>
               </div>
@@ -569,7 +551,7 @@
               </button>
               <button class="accion-btn accion-roja" id="btn-eliminar-todos" onclick="eliminarTodosDashboard()">
                 <span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg></span>
-                <span class="accion-texto"><strong>Eliminar Todos</strong><span>Eliminar todos los pedidos</span></span>
+                <span class="accion-texto"><strong>Eliminar Todos</strong><span>Elimina los pedidos abiertos (no los finalizados)</span></span>
                 <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
               </button>
             </div>
@@ -665,6 +647,10 @@
     // ─── Helpers de fecha/formato ─────────────────────────────
     function pad(n) { return String(n).padStart(2, "0"); }
 
+    function esc(v) {
+      return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
     function esMismaFecha(f1, f2) {
       return f1.getFullYear() === f2.getFullYear() && f1.getMonth() === f2.getMonth() && f1.getDate() === f2.getDate();
     }
@@ -748,7 +734,9 @@
 
     function calcularKPIsDelDia(pedidos, fechaMatcher) {
       const deHoy = pedidos.filter(p => fechaMatcher(p.hora_inicio));
-      const finalizadosHoy = deHoy.filter(p => p.estatus === "Finalizado");
+      // Lo finalizado cuenta el día en que se terminó (un pedido iniciado ayer y
+      // terminado hoy es producción de hoy).
+      const finalizadosHoy = pedidos.filter(p => p.estatus === "Finalizado" && fechaMatcher(p.hora_fin || p.hora_inicio));
 
       const referencias = deHoy.reduce((acc, p) => acc + (Number(p.cantidad_referencias) || 0), 0);
       const bultos = finalizadosHoy.reduce((acc, p) => acc + (Number(p.bultos) || 0), 0);
@@ -771,14 +759,17 @@
       };
     }
 
-    function renderTendencia(idEl, actual, anterior) {
+    function renderTendencia(idEl, actual, anterior, menosEsMejor = false) {
       const el = document.getElementById(idEl);
       if (!el) return;
       if (!anterior) { el.innerHTML = ""; return; }
       const pct = ((actual - anterior) / anterior) * 100;
       const abs = Math.abs(pct).toFixed(1);
-      if (pct > 0.5)       el.innerHTML = `<span class="sube">↑ ${abs}% vs. ayer</span>`;
-      else if (pct < -0.5) el.innerHTML = `<span class="baja">↓ ${abs}% vs. ayer</span>`;
+      // Verde = mejora, rojo = empeora (en tiempo por artículo, subir es empeorar).
+      const mejora = menosEsMejor ? pct < 0 : pct > 0;
+      const clase = mejora ? "bien" : "mal";
+      if (pct > 0.5)       el.innerHTML = `<span class="${clase}">↑ ${abs}% vs. ayer</span>`;
+      else if (pct < -0.5) el.innerHTML = `<span class="${clase}">↓ ${abs}% vs. ayer</span>`;
       else                 el.innerHTML = `<span class="igual">= Sin cambio</span>`;
     }
 
@@ -790,7 +781,7 @@
       document.getElementById("kpi-monto").textContent       = formatMonto(hoy.monto);
 
       renderTendencia("tend-pedidos",     hoy.totalPedidos, ayer.totalPedidos);
-      renderTendencia("tend-tiempo",      hoy.tiempoProm,   ayer.tiempoProm);
+      renderTendencia("tend-tiempo",      hoy.tiempoProm,   ayer.tiempoProm, true); // más tiempo = peor
       renderTendencia("tend-referencias", hoy.referencias,  ayer.referencias);
       renderTendencia("tend-bultos",      hoy.bultos,       ayer.bultos);
       renderTendencia("tend-monto",       hoy.monto,        ayer.monto);
@@ -805,7 +796,7 @@
       const activos  = pedidos.filter(p => p.estatus === "En Proceso").length;
       const pausados = pedidos.filter(p => p.estatus === "Pausado").length;
       // Finalizados: solo los de hoy, para que el total no crezca sin límite.
-      const finalizadosHoy = pedidos.filter(p => p.estatus === "Finalizado" && esHoy(p.hora_inicio)).length;
+      const finalizadosHoy = pedidos.filter(p => p.estatus === "Finalizado" && esHoy(p.hora_fin || p.hora_inicio)).length;
 
       const total = activos + pausados + finalizadosHoy || 1;
 
@@ -825,8 +816,8 @@
           data: {
             labels: ["Activos", "Pausados", "Finalizados"],
             datasets: [{
-              data, backgroundColor: ["#22C55E", "#3B82F6", "#F2845C"],
-              borderColor: "#131A24", borderWidth: 3, hoverOffset: 4
+              data, backgroundColor: ["#2563EB", "#D97706", "#16A34A"],
+              borderColor: "#FFFFFF", borderWidth: 3, hoverOffset: 4
             }]
           },
           options: {
@@ -872,8 +863,8 @@
       }
 
       const ctx = document.getElementById("chart-por-hora").getContext("2d");
-      const gridColor = "rgba(148,163,184,0.08)";
-      const tickColor = "#8B96A8";
+      const gridColor = "rgba(148,163,184,0.25)";
+      const tickColor = "#64748B";
 
       if (chartPorHora) {
         chartPorHora.data.labels = labels;
@@ -888,13 +879,13 @@
           labels,
           datasets: [{
             label: "Pedidos", data: valores,
-            borderColor: "#22C55E", borderWidth: 2.5, pointRadius: 3,
-            pointBackgroundColor: "#22C55E", pointBorderColor: "#0A0E14", pointBorderWidth: 1.5,
+            borderColor: "#2563EB", borderWidth: 2.5, pointRadius: 3,
+            pointBackgroundColor: "#2563EB", pointBorderColor: "#FFFFFF", pointBorderWidth: 1.5,
             tension: 0.4, fill: true,
             backgroundColor: (ctxb) => {
               const g = ctxb.chart.ctx.createLinearGradient(0, 0, 0, 240);
-              g.addColorStop(0, "rgba(34,197,94,0.28)");
-              g.addColorStop(1, "rgba(34,197,94,0)");
+              g.addColorStop(0, "rgba(37,99,235,0.28)");
+              g.addColorStop(1, "rgba(37,99,235,0)");
               return g;
             }
           }]
@@ -904,7 +895,7 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: "#171F2C", borderColor: "#22C55E", borderWidth: 1,
+              backgroundColor: "#0F172A", borderColor: "#2563EB", borderWidth: 1,
               titleColor: "#E7ECF3", bodyColor: "#E7ECF3", padding: 10,
               callbacks: { label: (c) => `${c.parsed.y} pedidos` }
             }
@@ -938,16 +929,18 @@
 
         let btn;
         if (p.estatus === "Pausado") {
-          btn = `<button class="btn-tabla-accion play" title="Reanudar" onclick="reanudarUnoDashboard('${p.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></button>`;
+          btn = `<button class="btn-tabla-accion play" title="Reanudar" onclick="reanudarUnoDashboard('${esc(p.id)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5v15l13-7.5Z"/></svg></button>`;
         } else {
           btn = `<a class="btn-tabla-accion ver" title="Ver en Pedidos" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></a>`;
         }
 
-        const nombreMostrar = esEquipo(p.sacador) ? p.sacador.split("/")[0].trim() + " +eq." : p.sacador;
+        // Nombre corto (dos primeras palabras) para que no se parta en cuatro líneas
+        const corto = n => String(n || "").trim().split(/\s+/).slice(0, 2).join(" ");
+        const nombreMostrar = esEquipo(p.sacador) ? corto(p.sacador.split("/")[0]) + " +eq." : corto(p.sacador);
 
         return `<tr>
-          <td>${p.numero_pedido}</td>
-          <td><div class="sacador-cell"><span class="sacador-avatar">${iniciales(p.sacador)}</span>${nombreMostrar}</td>
+          <td>${esc(p.numero_pedido)}</td>
+          <td title="${esc(p.sacador)}"><div class="sacador-cell" style="white-space:nowrap"><span class="sacador-avatar">${esc(iniciales(p.sacador))}</span>${esc(nombreMostrar)}</div></td>
           <td><span class="estado-badge ${estadoClase}">${estadoTxt}</span></td>
           <td>${p.cantidad_referencias ?? 0} productos</td>
           <td>${inicioTxt}</td>
@@ -969,7 +962,7 @@
         conteos[nombre] = (conteos[nombre] || 0) + 1;
       });
 
-      const colores = ["#22C55E", "#F2845C", "#3B82F6", "#A78BFA", "#4FA3D1"];
+      const colores = ["#2563EB", "#7C3AED", "#0284C7", "#D97706", "#DB2777"];
       const top5 = Object.entries(conteos)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
@@ -982,7 +975,7 @@
       const max = top5[0][1];
       wrap.innerHTML = top5.map(([nombre, valor], i) => `
         <div class="rank-row">
-          <span class="rank-nombre" title="${nombre}">${nombre.split(" ")[0]}</span>
+          <span class="rank-nombre" title="${esc(nombre)}">${esc(nombre.split(" ")[0])}</span>
           <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${Math.round((valor/max)*100)}%; background:${colores[i]}"></div></div>
           <span class="rank-valor">${valor}</span>
         </div>
@@ -1075,12 +1068,20 @@
       }
     }
 
+    // Solo pedidos ABIERTOS, igual que en Pedidos. Antes borraba también los
+    // finalizados (el historial) con un simple "¿Seguro?".
     async function eliminarTodosDashboard() {
-      if (!confirm("¿Eliminar TODOS los pedidos? Esta acción no se puede deshacer.")) return;
+      const abiertos = TODOS_PEDIDOS.filter(p => p.estatus !== "Finalizado");
+      if (abiertos.length === 0) { alert("No hay pedidos abiertos para eliminar."); return; }
+      const resp = prompt(
+        `Vas a eliminar ${abiertos.length} pedido(s) abiertos (los finalizados NO se tocan).\n` +
+        `Esta acción no se puede deshacer. Escribe ELIMINAR para confirmar:`
+      );
+      if (resp === null || resp.trim() !== "ELIMINAR") return;
       const btn = document.getElementById("btn-eliminar-todos");
       btn.disabled = true;
       try {
-        for (const p of TODOS_PEDIDOS) {
+        for (const p of abiertos) {
           await GMApi.eliminarPedido(p.id);
         }
         await refrescarDashboard();
@@ -1142,5 +1143,6 @@
       setInterval(refrescarDashboard, 60 * 1000);
     });
   </script>
+<script src="menu.js"></script>
 </body>
 </html>
