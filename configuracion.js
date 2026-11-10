@@ -35,10 +35,23 @@ async function mostrarAppPrincipal() {
     document.getElementById("usuario-nombre").textContent = usuario.nombre;
   }
 
-  // Si el usuario no es admin, ocultamos la gestión de usuarios
-  if (usuario && usuario.rol !== "admin") {
+  // Si el usuario no es admin (ni superadmin), ocultamos la gestión de usuarios
+  const esAdmin = !!usuario && ["admin", "superadmin", "super_admin"].includes(String(usuario.rol || "").toLowerCase());
+  if (usuario && !esAdmin) {
     const btnAdd = document.querySelector('.filters-card .filters-actions .add');
     if (btnAdd) btnAdd.style.display = "none";
+  }
+
+  // Copias de seguridad: respaldo completo de la base, solo superadmin y admin.
+  document.getElementById("btn-tab-backups").style.display = esAdmin ? "" : "none";
+  if (window.RespaldoUI) {
+    RespaldoUI.montar(document.getElementById("respaldo-bd"), {
+      api: GM_API_BASE_URL + "/api/respaldo",
+      token: () => GMApi.getToken(),
+      rol: () => (GMApi.getUsuario() || {}).rol,
+      roles: ["superadmin", "super_admin", "admin"],
+      prefijo: "gm-pedidos",
+    });
   }
 
   await renderListaUsuarios();
