@@ -119,9 +119,10 @@
       <nav class="config-subnav" style="flex:0 0 260px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px;">
         <button class="config-tab-btn active" data-tab="usuarios" onclick="mostrarTabConfig('usuarios')">👥 Gestión de Usuarios y Roles</button>
         <button class="config-tab-btn" data-tab="horarios" onclick="mostrarTabConfig('horarios')">⏱️ Horarios y Pausas Automáticas</button>
+        <button class="config-tab-btn" data-tab="backups" id="btn-tab-backups" onclick="mostrarTabConfig('backups')" style="display:none;">💾 Copias de seguridad</button>
         <div class="config-proximamente">
           <strong>Próximamente</strong>
-          General · Sucursales · Apariencia · Notificaciones · Parámetros de pedidos · Seguridad · Copias de seguridad · Integraciones · Reportes
+          General · Sucursales · Apariencia · Notificaciones · Parámetros de pedidos · Seguridad · Integraciones · Reportes
         </div>
       </nav>
 
@@ -181,8 +182,8 @@
           <p class="modal-hint">Próximamente: expiración de sesión, políticas de contraseña.</p></div>
         </div>
         <div class="config-tab-panel" id="tab-backups" style="display:none;">
-          <div class="filters-card"><div class="filters-card-title">💾 Copias de Seguridad</div>
-          <p class="modal-hint">Próximamente: exportar/respaldar la base de datos.</p></div>
+          <!-- Respaldo completo de la base (solo superadmin y admin; el backend también lo exige) -->
+          <div id="respaldo-bd"></div>
         </div>
         <div class="config-tab-panel" id="tab-integraciones" style="display:none;">
           <div class="filters-card"><div class="filters-card-title">🔌 Integraciones</div>
@@ -265,6 +266,7 @@
 
 <!-- Scripts en orden correcto -->
 <script src="gm-api.js"></script>
+<script src="respaldo-ui.js"></script>
 <script src="configuracion.js"></script>
 
 <script>
